@@ -47,7 +47,7 @@ public sealed class RegisterHandler(
     private async Task<Result<AuthResponse>> IssueTokensAsync(User user, CancellationToken ct)
     {
         var accessToken   = jwtService.GenerateAccessToken(user);
-        var refreshToken  = new RefreshToken
+        var refreshToken  = new Domain.Entities.RefreshToken
         {
             UserId    = user.Id,
             Token     = jwtService.GenerateRefreshToken(),

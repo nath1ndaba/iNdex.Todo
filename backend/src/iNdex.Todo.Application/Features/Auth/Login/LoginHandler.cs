@@ -26,11 +26,11 @@ public sealed class LoginHandler(
             return Result.Failure<AuthResponse>(
                 Error.Validation("Auth.InvalidCredentials", "Invalid email or password."));
 
-        var accessToken  = jwtService.GenerateAccessToken(user);
-        var refreshToken = new RefreshToken
+        var accessToken = jwtService.GenerateAccessToken(user);
+        var refreshToken = new Domain.Entities.RefreshToken
         {
-            UserId    = user.Id,
-            Token     = jwtService.GenerateRefreshToken(),
+            UserId = user.Id,
+            Token = jwtService.GenerateRefreshToken(),
             ExpiresAt = jwtService.RefreshTokenExpiry,
             CreatedBy = user.Id.ToString()
         };
@@ -39,7 +39,7 @@ public sealed class LoginHandler(
         var active = await refreshTokenRepository.GetActiveByUserIdAsync(user.Id, cancellationToken);
         foreach (var old in active)
         {
-            old.IsRevoked     = true;
+            old.IsRevoked = true;
             old.RevokedReason = "Replaced on new login";
             await refreshTokenRepository.UpdateAsync(old, cancellationToken);
         }

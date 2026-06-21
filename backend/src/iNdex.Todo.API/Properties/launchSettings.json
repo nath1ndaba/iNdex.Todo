@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "iNdex.Todo.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:51447;http://localhost:51448"
+    }
+  }
+}
