@@ -145,17 +145,50 @@ public sealed class UserSettingsConfiguration : IEntityTypeConfiguration<UserSet
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Theme).HasMaxLength(50).IsRequired();
         builder.Property(s => s.Language).HasMaxLength(10).IsRequired();
+        // Match the User global query filter to avoid EF warning on required principal
+        builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }
 
-public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
+public sealed class TaskReminderConfiguration : IEntityTypeConfiguration<TaskReminder>
 {
-    public void Configure(EntityTypeBuilder<AuditLog> builder)
+    public void Configure(EntityTypeBuilder<TaskReminder> builder)
     {
-        builder.HasKey(a => a.Id);
-        builder.Property(a => a.EntityName).HasMaxLength(100).IsRequired();
-        builder.Property(a => a.Action).HasMaxLength(50).IsRequired();
-        builder.Property(a => a.PerformedBy).HasMaxLength(256).IsRequired();
-        builder.HasIndex(a => new { a.EntityName, a.EntityId });
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.NotificationType).HasConversion<string>();
+        // Match TodoTask's global query filter
+        builder.HasQueryFilter(r => !r.IsDeleted);
     }
 }
+
+public sealed class TaskRecurrenceConfiguration : IEntityTypeConfiguration<TaskRecurrence>
+{
+    public void Configure(EntityTypeBuilder<TaskRecurrence> builder)
+    {
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Frequency).HasConversion<string>();
+        // Match TodoTask's global query filter
+        builder.HasQueryFilter(r => !r.IsDeleted);
+    }
+}
+
+public sealed class TaskActivityConfiguration : IEntityTypeConfiguration<TaskActivity>
+{
+    public void Configure(EntityTypeBuilder<TaskActivity> builder)
+    {
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.ActivityType).HasMaxLength(100).IsRequired();
+        // Match TodoTask's global query filter
+        builder.HasQueryFilter(a => !a.IsDeleted);
+    }
+}
+//{
+//    public void Configure(EntityTypeBuilder<AuditLog> builder)
+//    {
+//        builder.HasKey(a => a.Id);
+//        builder.Property(a => a.EntityName).HasMaxLength(100).IsRequired();
+//        builder.Property(a => a.Action).HasMaxLength(50).IsRequired();
+//        builder.Property(a => a.PerformedBy).HasMaxLength(256).IsRequired();
+//        builder.HasIndex(a => new { a.EntityName, a.EntityId });
+//    }
+//}

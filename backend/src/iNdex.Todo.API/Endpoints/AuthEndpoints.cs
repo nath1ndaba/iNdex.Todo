@@ -6,7 +6,7 @@ using iNdex.Todo.Application.Features.Auth.RefreshToken;
 using iNdex.Todo.Application.Features.Users.GetUserById;
 using iNdex.Todo.Contracts.Requests;
 using iNdex.Todo.Contracts.Responses;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace iNdex.Todo.API.Endpoints;
 
@@ -56,9 +56,9 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Register(
-        RegisterUserRequest request,
-        IValidator<RegisterUserRequest> validator,
-        IHandler<RegisterUserRequest, AuthResponse> handler,
+        [FromBody]     RegisterUserRequest request,
+        [FromServices] IValidator<RegisterUserRequest> validator,
+        [FromServices] IHandler<RegisterUserRequest, AuthResponse> handler,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAndHandleAsync(request, ct);
@@ -69,9 +69,9 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Login(
-        LoginRequest request,
-        IValidator<LoginRequest> validator,
-        IHandler<LoginRequest, AuthResponse> handler,
+        [FromBody]     LoginRequest request,
+        [FromServices] IValidator<LoginRequest> validator,
+        [FromServices] IHandler<LoginRequest, AuthResponse> handler,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAndHandleAsync(request, ct);
@@ -82,8 +82,8 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Refresh(
-        RefreshTokenRequest request,
-        IHandler<RefreshTokenRequest, AuthResponse> handler,
+        [FromBody]     RefreshTokenRequest request,
+        [FromServices] IHandler<RefreshTokenRequest, AuthResponse> handler,
         CancellationToken ct)
     {
         var result = await handler.HandleAsync(request, ct);
@@ -91,8 +91,8 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Revoke(
-        RevokeTokenRequest request,
-        IHandler<RevokeTokenRequest, bool> handler,
+        [FromBody]     RevokeTokenRequest request,
+        [FromServices] IHandler<RevokeTokenRequest, bool> handler,
         CancellationToken ct)
     {
         var result = await handler.HandleAsync(request, ct);
@@ -100,8 +100,8 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> Me(
-        ICurrentUserService currentUser,
-        IHandler<GetUserByIdQuery, UserResponse> handler,
+        [FromServices] ICurrentUserService currentUser,
+        [FromServices] IHandler<GetUserByIdQuery, UserResponse> handler,
         CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId is null)

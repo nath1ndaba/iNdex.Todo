@@ -8,6 +8,7 @@ using iNdex.Todo.Application.Features.TodoLists.GetTodoListById;
 using iNdex.Todo.Application.Features.TodoLists.UpdateTodoList;
 using iNdex.Todo.Contracts.Requests;
 using iNdex.Todo.Contracts.Responses;
+using Microsoft.AspNetCore.Mvc;
 
 namespace iNdex.Todo.API.Endpoints;
 
@@ -54,9 +55,9 @@ public static class TodoListEndpoints
     }
 
     private static async Task<IResult> CreateTodoList(
-        CreateTodoListRequest request,
-        IValidator<CreateTodoListRequest> validator,
-        IHandler<CreateTodoListRequest, CreatedResponse> handler,
+        [FromBody]     CreateTodoListRequest request,
+        [FromServices] IValidator<CreateTodoListRequest> validator,
+        [FromServices] IHandler<CreateTodoListRequest, CreatedResponse> handler,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAndHandleAsync(request, ct);
@@ -68,7 +69,7 @@ public static class TodoListEndpoints
 
     private static async Task<IResult> GetAllTodoLists(
         Guid ownerId,
-        IHandler<GetAllTodoListsQuery, List<TodoListResponse>> handler,
+        [FromServices] IHandler<GetAllTodoListsQuery, List<TodoListResponse>> handler,
         CancellationToken ct)
     {
         var result = await handler.HandleAsync(new GetAllTodoListsQuery(ownerId), ct);
@@ -77,7 +78,7 @@ public static class TodoListEndpoints
 
     private static async Task<IResult> GetTodoListById(
         Guid id,
-        IHandler<GetTodoListByIdQuery, TodoListResponse> handler,
+        [FromServices] IHandler<GetTodoListByIdQuery, TodoListResponse> handler,
         CancellationToken ct)
     {
         var result = await handler.HandleAsync(new GetTodoListByIdQuery(id), ct);
@@ -86,9 +87,9 @@ public static class TodoListEndpoints
 
     private static async Task<IResult> UpdateTodoList(
         Guid id,
-        UpdateTodoListRequest request,
-        IValidator<UpdateTodoListRequest> validator,
-        IHandler<UpdateTodoListCommand, TodoListResponse> handler,
+        [FromBody]     UpdateTodoListRequest request,
+        [FromServices] IValidator<UpdateTodoListRequest> validator,
+        [FromServices] IHandler<UpdateTodoListCommand, TodoListResponse> handler,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAndHandleAsync(request, ct);
@@ -100,7 +101,7 @@ public static class TodoListEndpoints
 
     private static async Task<IResult> DeleteTodoList(
         Guid id,
-        IHandler<DeleteTodoListCommand, bool> handler,
+        [FromServices] IHandler<DeleteTodoListCommand, bool> handler,
         CancellationToken ct)
     {
         var result = await handler.HandleAsync(new DeleteTodoListCommand(id), ct);
