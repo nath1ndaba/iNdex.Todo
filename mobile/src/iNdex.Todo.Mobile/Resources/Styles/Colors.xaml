@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--  iNdex Todo Brand Palette  -->
+    <Color x:Key="ElectricBlue">#00AEEF</Color>
+    <Color x:Key="VibrantGreen">#39D353</Color>
+    <Color x:Key="GoldenOrange">#F5A623</Color>
+    <Color x:Key="DangerRed">#EF4444</Color>
+
+    <!--  Dark Theme  -->
+    <Color x:Key="DarkBackground">#0F172A</Color>
+    <Color x:Key="DarkSurface">#1E293B</Color>
+    <Color x:Key="DarkBorder">#334155</Color>
+    <Color x:Key="DarkText">#F1F5F9</Color>
+    <Color x:Key="DarkTextMuted">#94A3B8</Color>
+
+    <!--  Light Theme  -->
+    <Color x:Key="LightBackground">#F8FAFC</Color>
+    <Color x:Key="LightSurface">#FFFFFF</Color>
+    <Color x:Key="LightBorder">#E2E8F0</Color>
+    <Color x:Key="LightText">#0F172A</Color>
+    <Color x:Key="LightTextMuted">#64748B</Color>
+
+</ResourceDictionary>

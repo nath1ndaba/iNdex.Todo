@@ -1,0 +1,102 @@
+## ── .NET / C# ────────────────────────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+[Pp]ublish/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!**/packages/build/
+nuget.config.local
+
+## ── Entity Framework ─────────────────────────────────────────────────────────
+# Never commit auto-generated migrations in CI — generate per environment
+# (remove this line if you DO want to commit migrations)
+# **/Migrations/
+
+## ── MAUI / Xamarin ───────────────────────────────────────────────────────────
+*.apk
+*.aab
+*.ipa
+*.dSYM/
+*.app/
+**/.vs/
+**/google-services.json
+**/GoogleService-Info.plist
+
+## ── Visual Studio ────────────────────────────────────────────────────────────
+.vs/
+*.rsuser
+*.MoTest.xml
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/ipch/
+TestResults/
+[Tt]est[Rr]esult*/
+*.TestResult.xml
+*.trx
+
+## ── JetBrains Rider ──────────────────────────────────────────────────────────
+.idea/
+*.sln.iml
+
+## ── macOS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+## ── Windows ──────────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## ── Node (if any tooling scripts) ───────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+## ── Docker ───────────────────────────────────────────────────────────────────
+.dockerignore-local
+
+## ── Environment / secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+appsettings.Production.json
+appsettings.Staging.json
+**/secrets.json
+**/*secret*
+
+## ── Coverage / test output ───────────────────────────────────────────────────
+coverage/
+*.coverage
+*.coveragexml
+lcov.info

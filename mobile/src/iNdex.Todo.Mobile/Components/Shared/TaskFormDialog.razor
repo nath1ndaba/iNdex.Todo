@@ -1,0 +1,103 @@
+@* Shared/TaskFormDialog.razor *@
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.TaskAlt" Color="Color.Secondary" />
+            <MudText Typo="Typo.h6" Style="font-weight:700">
+                @(ExistingTask is null ? "New Task" : "Edit Task")
+            </MudText>
+        </MudStack>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3" Class="pt-1">
+            <MudTextField @bind-Value="_title"
+                          Label="Task title *"
+                          Variant="Variant.Outlined"
+                          MaxLength="500"
+                          FullWidth="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.TaskAlt" />
+
+            <MudTextField @bind-Value="_description"
+                          Label="Description (optional)"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          MaxLength="2000"
+                          FullWidth="true" />
+
+            <MudSelect T="int" @bind-Value="_priority"
+                       Label="Priority"
+                       Variant="Variant.Outlined"
+                       FullWidth="true"
+                       AdornmentIcon="@Icons.Material.Filled.Flag"
+                       Adornment="Adornment.Start">
+                <MudSelectItem T="int" Value="0">None</MudSelectItem>
+                <MudSelectItem T="int" Value="1">Low</MudSelectItem>
+                <MudSelectItem T="int" Value="2">Medium</MudSelectItem>
+                <MudSelectItem T="int" Value="3">High</MudSelectItem>
+                <MudSelectItem T="int" Value="4">Critical</MudSelectItem>
+            </MudSelect>
+
+            <MudDatePicker @bind-Date="_dueDate"
+                           Label="Due date (optional)"
+                           Variant="Variant.Outlined"
+                           Editable="true"
+                           MinDate="DateTime.Today" />
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="Submit"
+                   Disabled="@string.IsNullOrWhiteSpace(_title)"
+                   Class="rounded-xl">
+            @(ExistingTask is null ? "Add Task" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public TodoTaskResponse? ExistingTask { get; set; }
+
+    private string _title       = string.Empty;
+    private string _description = string.Empty;
+    private int    _priority    = 0;
+    private DateTime? _dueDate  = null;
+
+    protected override void OnInitialized()
+    {
+        if (ExistingTask is not null)
+        {
+            _title       = ExistingTask.Title;
+            _description = ExistingTask.Description ?? string.Empty;
+            _dueDate     = ExistingTask.DueDate?.ToLocalTime();
+            _priority    = ExistingTask.Priority switch
+            {
+                "Critical" => 4,
+                "High"     => 3,
+                "Medium"   => 2,
+                "Low"      => 1,
+                _          => 0
+            };
+        }
+    }
+
+    private void Submit()
+    {
+        var req = new CreateTodoTaskRequest(
+            _title.Trim(),
+            string.IsNullOrWhiteSpace(_description) ? null : _description.Trim(),
+            _dueDate.HasValue ? _dueDate.Value.ToUniversalTime() : null,
+            _priority,
+            null,       // CategoryId — future feature
+            Guid.Empty  // placeholder; caller sets the real ListId
+        );
+        MudDialog.Close(DialogResult.Ok(req));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

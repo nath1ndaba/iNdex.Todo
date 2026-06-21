@@ -1,0 +1,69 @@
+version: "3.9"
+
+# ────────────────────────────────────────────────────────────────────────────
+#  iNdex Todo — Local Development Stack
+#  Usage:
+#    docker compose up -d          → start all services
+#    docker compose logs -f api    → tail API logs
+#    docker compose down -v        → stop and remove volumes
+# ────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: index_todo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       index_todo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── pgAdmin (optional DB browser) ─────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: index_todo_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    admin@index.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # ── .NET 10 API ────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: index_todo_api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT:                    Development
+      ASPNETCORE_URLS:                           http://+:5000
+      ConnectionStrings__DefaultConnection:      "Host=postgres;Port=5432;Database=index_todo;Username=postgres;Password=postgres"
+      AllowedOrigins__0:                         "http://localhost:3000"
+      AllowedOrigins__1:                         "http://localhost:5173"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  pgadmin_data:

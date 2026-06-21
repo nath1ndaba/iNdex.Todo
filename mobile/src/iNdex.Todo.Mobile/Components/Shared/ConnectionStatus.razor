@@ -1,0 +1,43 @@
+@* Shared/ConnectionStatus.razor *@
+@inject TodoRealtimeService Realtime
+@implements IDisposable
+
+<MudTooltip Text="@_tooltip" Placement="Placement.Bottom">
+    <MudIcon Icon="@_icon"
+             Style="@($"font-size:14px;color:{_color};transition:color .3s")"
+             Class="ml-1" />
+</MudTooltip>
+
+@code {
+    private string _icon    = Icons.Material.Filled.CloudOff;
+    private string _color   = "#EF4444";
+    private string _tooltip = "Not connected";
+
+    protected override void OnInitialized()
+    {
+        Realtime.OnConnected    += OnConnected;
+        Realtime.OnDisconnected += OnDisconnected;
+    }
+
+    private void OnConnected()
+    {
+        _icon    = Icons.Material.Filled.Cloud;
+        _color   = "#39D353";
+        _tooltip = "Real-time sync active";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnDisconnected()
+    {
+        _icon    = Icons.Material.Filled.CloudOff;
+        _color   = "#EF4444";
+        _tooltip = "Disconnected — changes may not sync";
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Realtime.OnConnected    -= OnConnected;
+        Realtime.OnDisconnected -= OnDisconnected;
+    }
+}

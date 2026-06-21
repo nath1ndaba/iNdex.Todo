@@ -1,0 +1,117 @@
+@page "/register"
+@inject IAuthApi AuthApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Register – iNdex Todo</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall"
+              Class="d-flex flex-column align-center justify-center"
+              Style="min-height:80vh">
+
+    <MudStack AlignItems="AlignItems.Center" Spacing="0" Class="mb-6">
+        <MudText Typo="Typo.h3" Style="font-weight:900;color:#00AEEF;letter-spacing:-1px">iNdex</MudText>
+        <MudText Typo="Typo.h4" Style="font-weight:900;color:#F5A623;margin-top:-4px">Todo</MudText>
+    </MudStack>
+
+    <MudPaper Elevation="4" Class="pa-6 rounded-xl" Style="width:100%">
+        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700">Create your account</MudText>
+
+        <MudGrid Spacing="2" Class="mb-1">
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_firstName" Label="First name"
+                              Variant="Variant.Outlined" FullWidth="true"
+                              MaxLength="100" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_lastName" Label="Last name"
+                              Variant="Variant.Outlined" FullWidth="true"
+                              MaxLength="100" />
+            </MudItem>
+        </MudGrid>
+
+        <MudTextField @bind-Value="_email"
+                      Label="Email address"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Email"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Email"
+                      FullWidth="true"
+                      Class="mt-2 mb-2" />
+
+        <MudTextField @bind-Value="_password"
+                      Label="Password"
+                      Variant="Variant.Outlined"
+                      InputType="@(_showPwd ? InputType.Text : InputType.Password)"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _showPwd = !_showPwd"
+                      HelperText="Min 8 chars, 1 uppercase, 1 digit"
+                      FullWidth="true"
+                      Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                   OnClick="Register"
+                   Disabled="_loading"
+                   Class="rounded-xl">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Create Account
+        </MudButton>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.body2" Align="Align.Center">
+            Already have an account?
+            <MudLink Href="/login" Color="Color.Primary">Sign in</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _firstName = string.Empty;
+    private string _lastName  = string.Empty;
+    private string _email     = string.Empty;
+    private string _password  = string.Empty;
+    private bool   _showPwd;
+    private bool   _loading;
+
+    private async Task Register()
+    {
+        if (string.IsNullOrWhiteSpace(_firstName) ||
+            string.IsNullOrWhiteSpace(_email)     ||
+            string.IsNullOrWhiteSpace(_password))
+        {
+            Snackbar.Add("Please fill in all required fields.", Severity.Warning);
+            return;
+        }
+
+        _loading = true;
+        try
+        {
+            var resp = await AuthApi.RegisterAsync(
+                new(_firstName.Trim(), _lastName.Trim(), _email.Trim(), _password));
+
+            if (!resp.IsSuccessStatusCode || resp.Content is null)
+            {
+                var msg = resp.Error?.Content ?? "Registration failed.";
+                Snackbar.Add(msg, Severity.Error);
+                return;
+            }
+
+            var auth = resp.Content;
+            AppState.SetSession(auth.User, auth.AccessToken, auth.RefreshToken, auth.ExpiresAt);
+            Snackbar.Add($"Welcome, {_firstName}! 🎉", Severity.Success);
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+}

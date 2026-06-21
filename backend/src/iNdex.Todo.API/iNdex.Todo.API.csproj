@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\iNdex.Todo.Application\iNdex.Todo.Application.csproj" />
+    <ProjectReference Include="..\iNdex.Todo.Infrastructure\iNdex.Todo.Infrastructure.csproj" />
+    <ProjectReference Include="..\iNdex.Todo.Contracts\iNdex.Todo.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.*" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.*" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.*" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.*" />
+  </ItemGroup>
+</Project>

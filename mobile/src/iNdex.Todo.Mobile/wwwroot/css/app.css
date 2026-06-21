@@ -1,0 +1,119 @@
+/* ── iNdex Todo — Global Styles ──────────────────────────────────────────── */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --color-blue:   #00AEEF;
+    --color-green:  #39D353;
+    --color-orange: #F5A623;
+    --color-bg:     #0F172A;
+    --color-surface:#1E293B;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent text resize on iOS rotation */
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Safe area insets for notched phones */
+.mud-appbar {
+    padding-top: env(safe-area-inset-top) !important;
+}
+
+/* ── Splash screen ───────────────────────────────────────────────────────── */
+#splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0F172A;
+    z-index: 9999;
+    transition: opacity .4s ease;
+}
+
+.splash-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+}
+
+.splash-ring {
+    width: 56px;
+    height: 56px;
+    border: 4px solid rgba(0, 174, 239, .15);
+    border-top-color: #00AEEF;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Scrollbar (desktop / WebView) ──────────────────────────────────────── */
+::-webkit-scrollbar         { width: 6px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: rgba(255,255,255,.12); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+
+/* ── MudBlazor overrides ─────────────────────────────────────────────────── */
+
+/* Round ALL MudPapers slightly */
+.mud-paper { border-radius: 12px !important; }
+
+/* Ripple cursor */
+.cursor-pointer { cursor: pointer; }
+
+/* MudNavMenu active item */
+.mud-nav-link.active {
+    background: rgba(0, 174, 239, .12) !important;
+    color: #00AEEF !important;
+    font-weight: 600;
+}
+.mud-nav-link.active .mud-icon-root { color: #00AEEF !important; }
+
+/* MudChipSet in filter bar */
+.mud-chip { border-radius: 999px !important; }
+
+/* MudCheckBox completed state */
+.mud-checkbox.mud-checkbox-true .mud-icon-root { color: #39D353 !important; }
+
+/* Better tab underline */
+.mud-tabs-toolbar .mud-tab.mud-tab-active {
+    color: #00AEEF !important;
+    font-weight: 700;
+}
+.mud-tabs-toolbar .mud-tab-active-indicator {
+    background-color: #00AEEF !important;
+}
+
+/* Floating Action Button glow */
+.mud-fab.mud-color-primary {
+    box-shadow: 0 0 24px rgba(0, 174, 239, .35), 0 4px 16px rgba(0,0,0,.4) !important;
+}
+
+/* ── Error UI ────────────────────────────────────────────────────────────── */
+#blazor-error-ui {
+    background: #EF4444;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0,0,0,.2);
+    display: none;
+    left: 0;
+    padding: .75rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 9000;
+    color: white;
+    font-size: .875rem;
+}
+
+#blazor-error-ui .dismiss { cursor: pointer; float: right; font-weight: 700; }

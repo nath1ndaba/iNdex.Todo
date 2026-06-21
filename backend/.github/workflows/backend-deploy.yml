@@ -1,0 +1,28 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [publish]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Publish API
+        run: |
+          dotnet publish src/iNdex.Todo.API/iNdex.Todo.API.csproj \
+            --configuration Release \
+            --output ./publish \
+            --no-self-contained
+
+      - name: Deploy to server
+        # Replace with your deployment target (Docker, Azure, Railway, etc.)
+        run: echo "Add your deployment step here"

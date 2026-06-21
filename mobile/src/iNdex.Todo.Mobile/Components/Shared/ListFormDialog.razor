@@ -1,0 +1,97 @@
+@inject AppState AppState
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Style="font-weight:700">
+                @(ExistingList is null ? "New List" : "Edit List")
+            </MudText>
+        </MudStack>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3" Class="pt-1">
+            <MudTextField @bind-Value="_name"
+                          Label="List name *"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.List"
+                          MaxLength="200"
+                          FullWidth="true" />
+
+            <MudTextField @bind-Value="_description"
+                          Label="Description (optional)"
+                          Variant="Variant.Outlined"
+                          Lines="2"
+                          MaxLength="1000"
+                          FullWidth="true" />
+
+            <MudText Typo="Typo.caption" Style="opacity:.55">Accent colour</MudText>
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                @foreach (var color in _palette)
+                {
+                    <div @onclick="() => _color = color"
+                         style="@($"width:28px;height:28px;border-radius:50%;background:{color};cursor:pointer;border:3px solid {(_color==color?"white":"transparent")};transition:border .15s")">
+                    </div>
+                }
+            </MudStack>
+
+            <MudTextField @bind-Value="_icon"
+                          Label="Icon (emoji or text, optional)"
+                          Variant="Variant.Outlined"
+                          MaxLength="10"
+                          FullWidth="true" />
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(_name)"
+                   Class="rounded-xl">
+            @(ExistingList is null ? "Create" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public TodoListResponse? ExistingList { get; set; }
+
+    private string _name        = string.Empty;
+    private string _description = string.Empty;
+    private string _color       = "#00AEEF";
+    private string _icon        = string.Empty;
+
+    private readonly string[] _palette =
+    [
+        "#00AEEF", "#39D353", "#F5A623", "#EF4444",
+        "#8B5CF6", "#EC4899", "#14B8A6", "#F59E0B"
+    ];
+
+    protected override void OnInitialized()
+    {
+        if (ExistingList is not null)
+        {
+            _name        = ExistingList.Name;
+            _description = ExistingList.Description ?? string.Empty;
+            _color       = ExistingList.Color ?? "#00AEEF";
+            _icon        = ExistingList.Icon ?? string.Empty;
+        }
+    }
+
+    private void Submit()
+    {
+        var req = new CreateTodoListRequest(
+            _name.Trim(),
+            string.IsNullOrWhiteSpace(_description) ? null : _description.Trim(),
+            _color,
+            string.IsNullOrWhiteSpace(_icon) ? null : _icon.Trim(),
+            AppState.CurrentUser!.Id);
+
+        MudDialog.Close(DialogResult.Ok(req));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

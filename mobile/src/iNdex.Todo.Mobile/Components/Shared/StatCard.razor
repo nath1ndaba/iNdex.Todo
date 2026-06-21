@@ -1,0 +1,20 @@
+@* Shared/StatCard.razor *@
+
+<MudPaper Elevation="2" Class="pa-4 rounded-xl" Style="height:100%">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+        <MudAvatar Style="@($"background:linear-gradient(135deg,{Color}22,{Color}44);color:{Color}")" Size="Size.Medium">
+            <MudIcon Icon="@Icon" />
+        </MudAvatar>
+        <div>
+            <MudText Typo="Typo.h5" Style="@($"font-weight:800;color:{Color};line-height:1.1")">@Value</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.55">@Label</MudText>
+        </div>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Label  { get; set; } = "";
+    [Parameter, EditorRequired] public string Value  { get; set; } = "";
+    [Parameter, EditorRequired] public string Icon   { get; set; } = "";
+    [Parameter, EditorRequired] public string Color  { get; set; } = "#00AEEF";
+}

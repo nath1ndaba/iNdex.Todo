@@ -1,0 +1,97 @@
+@page "/login"
+@inject IAuthApi AuthApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Sign In – iNdex Todo</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall"
+              Class="d-flex flex-column align-center justify-center"
+              Style="min-height:80vh">
+
+    <MudStack AlignItems="AlignItems.Center" Spacing="0" Class="mb-6">
+        <MudText Typo="Typo.h3" Style="font-weight:900;color:#00AEEF;letter-spacing:-1px">iNdex</MudText>
+        <MudText Typo="Typo.h4" Style="font-weight:900;color:#F5A623;margin-top:-4px">Todo</MudText>
+        <MudText Typo="Typo.caption" Class="mt-1" Style="opacity:.6">Your tasks, always in sync.</MudText>
+    </MudStack>
+
+    <MudPaper Elevation="4" Class="pa-6 rounded-xl" Style="width:100%">
+        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700">Welcome back</MudText>
+
+        <MudTextField @bind-Value="_email"
+                      Label="Email address"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Email"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Email"
+                      FullWidth="true"
+                      Class="mb-3" />
+
+        <MudTextField @bind-Value="_password"
+                      Label="Password"
+                      Variant="Variant.Outlined"
+                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _showPassword = !_showPassword"
+                      FullWidth="true"
+                      Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.Login"
+                   OnClick="SignIn"
+                   Disabled="_loading"
+                   Class="rounded-xl">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Sign In
+        </MudButton>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.body2" Align="Align.Center">
+            No account yet?
+            <MudLink Href="/register" Color="Color.Primary">Register</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _email        = string.Empty;
+    private string _password     = string.Empty;
+    private bool   _showPassword;
+    private bool   _loading;
+
+    private async Task SignIn()
+    {
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+        {
+            Snackbar.Add("Please enter your email and password.", Severity.Warning);
+            return;
+        }
+
+        _loading = true;
+        try
+        {
+            var resp = await AuthApi.LoginAsync(new(_email, _password));
+
+            if (!resp.IsSuccessStatusCode || resp.Content is null)
+            {
+                Snackbar.Add("Invalid email or password.", Severity.Error);
+                return;
+            }
+
+            var auth = resp.Content;
+            AppState.SetSession(auth.User, auth.AccessToken, auth.RefreshToken, auth.ExpiresAt);
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+}

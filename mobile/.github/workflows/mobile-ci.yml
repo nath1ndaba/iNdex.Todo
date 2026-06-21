@@ -1,0 +1,69 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore dependencies
+        run: dotnet restore iNdex.Todo.Mobile.sln
+
+      - name: Build Android (Debug)
+        run: |
+          dotnet build src/iNdex.Todo.Mobile/iNdex.Todo.Mobile.csproj \
+            -f net10.0-android \
+            -c Debug \
+            --no-restore
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: |
+            src/iNdex.Todo.Mobile/bin/Debug/net10.0-android/*.apk
+          retention-days: 7
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Restore dependencies
+        run: dotnet restore iNdex.Todo.Mobile.sln
+
+      - name: Build Windows (Debug)
+        run: |
+          dotnet build src/iNdex.Todo.Mobile/iNdex.Todo.Mobile.csproj `
+            -f net10.0-windows10.0.19041.0 `
+            -c Debug `
+            --no-restore

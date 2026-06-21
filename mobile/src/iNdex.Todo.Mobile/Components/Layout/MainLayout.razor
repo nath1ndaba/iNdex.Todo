@@ -1,0 +1,129 @@
+@inherits LayoutComponentBase
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject TodoRealtimeService Realtime
+@inject TokenRefreshService TokenRefresh
+@implements IDisposable
+
+<MudLayout>
+
+    <!-- ── App Bar ──────────────────────────────────────────────────────── -->
+    <MudAppBar Elevation="0" Dense="true" Color="Color.Inherit"
+               Style="backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.08)">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="ToggleDrawer" />
+
+        <!-- Logo text -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="ml-1">
+            <MudText Typo="Typo.h6"
+                     Style="font-weight:800;letter-spacing:-0.5px;color:#00AEEF">iNdex</MudText>
+            <MudText Typo="Typo.h6"
+                     Style="font-weight:800;letter-spacing:-0.5px;color:#F5A623">Todo</MudText>
+        </MudStack>
+
+        <MudSpacer />
+
+        @if (AppState.IsAuthenticated)
+        {
+            <MudText Typo="Typo.caption" Class="mr-2" Style="opacity:.7">
+                @AppState.CurrentUser!.FirstName
+            </MudText>
+            <MudAvatar Color="Color.Primary" Size="Size.Small">
+                @AppState.CurrentUser.FirstName[0]
+            </MudAvatar>
+            <MudIconButton Icon="@Icons.Material.Outlined.Logout"
+                           Color="Color.Inherit"
+                           Size="Size.Small"
+                           Class="ml-1"
+                           OnClick="Logout" />
+        }
+
+        @if (AppState.IsAuthenticated)
+        {
+            <ConnectionStatus />
+        }
+        <MudIconButton Icon="@(AppState.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit"
+                       Size="Size.Small"
+                       OnClick="AppState.ToggleTheme" />
+    </MudAppBar>
+
+    <!-- ── Navigation Drawer ────────────────────────────────────────────── -->
+    <MudDrawer @bind-Open="_drawerOpen"
+               Elevation="0"
+               Variant="@DrawerVariant.Responsive"
+               ClipMode="DrawerClipMode.Always">
+        <MudDrawerHeader Class="pa-4">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.subtitle2" Style="color:#00AEEF;font-weight:800">iNdex</MudText>
+                <MudText Typo="Typo.h5" Style="color:#F5A623;font-weight:900;line-height:1">Todo</MudText>
+            </MudStack>
+        </MudDrawerHeader>
+
+        <MudDivider />
+
+        <MudNavMenu>
+            @if (AppState.IsAuthenticated)
+            {
+                <MudNavLink Href="/" Match="NavLinkMatch.All"
+                            Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                <MudNavLink Href="/lists"
+                            Icon="@Icons.Material.Filled.List">My Lists</MudNavLink>
+                <MudNavLink Href="/tasks"
+                            Icon="@Icons.Material.Filled.TaskAlt">All Tasks</MudNavLink>
+                <MudDivider Class="my-2" />
+                <MudNavLink Href="/settings"
+                            Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+            }
+            else
+            {
+                <MudNavLink Href="/login"
+                            Icon="@Icons.Material.Filled.Login">Sign In</MudNavLink>
+                <MudNavLink Href="/register"
+                            Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
+            }
+        </MudNavMenu>
+    </MudDrawer>
+
+    <!-- ── Main Content ──────────────────────────────────────────────────── -->
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4 pa-sm-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += OnAppStateChanged;
+        TokenRefresh.Start();
+
+        if (AppState.IsAuthenticated)
+            await Realtime.ConnectAsync(AppState.CurrentUser!.Id);
+    }
+
+    private async void OnAppStateChanged()
+    {
+        // Connect SignalR when user first signs in
+        if (AppState.IsAuthenticated)
+            await Realtime.ConnectAsync(AppState.CurrentUser!.Id);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void Logout()
+    {
+        AppState.ClearUser();
+        Nav.NavigateTo("/login");
+    }
+
+    public void Dispose() => AppState.OnChange -= OnAppStateChanged;
+}

@@ -1,0 +1,222 @@
+@page "/lists/{ListId:guid}"
+@inject ITodoListApi ListApi
+@inject ITodoTaskApi TaskApi
+@inject TodoRealtimeService Realtime
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+
+<PageTitle>@(_list?.Name ?? "List") – iNdex Todo</PageTitle>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-1">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="() => Nav.NavigateTo("/lists")" />
+    @if (_list is not null)
+    {
+        <div style="@($"width:10px;height:10px;border-radius:50%;background:{_list.Color ?? "#00AEEF"}")"></div>
+        <MudText Typo="Typo.h5" Style="font-weight:800">@_list.Name</MudText>
+        <MudSpacer />
+        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">
+            @_tasks.Count tasks
+        </MudChip>
+    }
+</MudStack>
+
+@if (!string.IsNullOrEmpty(_list?.Description))
+{
+    <MudText Typo="Typo.body2" Style="opacity:.5;margin-left:48px" Class="mb-4">@_list.Description</MudText>
+}
+
+<!-- ── Filter tabs ─────────────────────────────────────────────────────────── -->
+<MudTabs @bind-ActivePanelIndex="_tab" Rounded="true" Border="true" Class="mb-4"
+         PanelClass="pa-0 pt-4">
+    <MudTabPanel Text="All" />
+    <MudTabPanel Text="Pending" />
+    <MudTabPanel Text="Done" />
+</MudTabs>
+
+<!-- ── Task list ──────────────────────────────────────────────────────────── -->
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (int i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="rounded-xl" /> }
+    </MudStack>
+}
+else if (FilteredTasks.Count == 0)
+{
+    <MudPaper Elevation="0" Class="pa-8 rounded-xl d-flex flex-column align-center"
+              Style="border:2px dashed rgba(255,255,255,.08)">
+        <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Style="font-size:3rem;opacity:.25" />
+        <MudText Typo="Typo.body1" Class="mt-2 mb-4" Style="opacity:.4">
+            @(_tab == 2 ? "No completed tasks yet." : "No tasks here. Add one!")
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var task in FilteredTasks)
+        {
+            <TaskCard Task="task"
+                      OnComplete="() => ToggleComplete(task)"
+                      OnEdit="() => OpenEditDialog(task)"
+                      OnDelete="() => DeleteTask(task)" />
+        }
+    </MudStack>
+}
+
+<!-- ── FAB ────────────────────────────────────────────────────────────────── -->
+<MudFab Color="Color.Primary"
+        StartIcon="@Icons.Material.Filled.Add"
+        Style="position:fixed;bottom:24px;right:24px;z-index:100"
+        OnClick="OpenCreateDialog"
+        Label="Add Task" />
+
+@code {
+    [Parameter] public Guid ListId { get; set; }
+
+    private TodoListResponse? _list;
+    private List<TodoTaskResponse> _tasks = [];
+    private bool _loading = true;
+    private int _tab = 0;
+
+    private List<TodoTaskResponse> FilteredTasks => _tab switch
+    {
+        1 => _tasks.Where(t => !t.IsCompleted).ToList(),
+        2 => _tasks.Where(t =>  t.IsCompleted).ToList(),
+        _ => _tasks
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+
+        // SignalR — join this list's group
+        Realtime.OnTaskCreated += OnRealTimeTaskCreated;
+        Realtime.OnTaskUpdated += OnRealTimeTaskUpdated;
+        Realtime.OnTaskDeleted += OnRealTimeTaskDeleted;
+        await Realtime.JoinListAsync(ListId);
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var listTask  = ListApi.GetTodoListByIdAsync(ListId);
+            var tasksTask = TaskApi.GetTasksByListAsync(ListId);
+            await Task.WhenAll(listTask, tasksTask);
+
+            var lr = await listTask;
+            var tr = await tasksTask;
+
+            if (lr.IsSuccessStatusCode) _list  = lr.Content;
+            if (tr.IsSuccessStatusCode) _tasks = tr.Content ?? [];
+        }
+        finally { _loading = false; }
+    }
+
+    // ── Real-time handlers ────────────────────────────────────────────────
+    private void OnRealTimeTaskCreated(TodoTaskResponse t)
+    {
+        if (t.TodoListId != ListId) return;
+        _tasks.Insert(0, t);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnRealTimeTaskUpdated(TodoTaskResponse t)
+    {
+        if (t.TodoListId != ListId) return;
+        var idx = _tasks.FindIndex(x => x.Id == t.Id);
+        if (idx >= 0) _tasks[idx] = t;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnRealTimeTaskDeleted(Guid id)
+    {
+        _tasks.RemoveAll(t => t.Id == id);
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Task actions ──────────────────────────────────────────────────────
+    private async Task ToggleComplete(TodoTaskResponse task)
+    {
+        var r = await TaskApi.CompleteTaskAsync(task.Id, new(!task.IsCompleted));
+        if (r.IsSuccessStatusCode && r.Content is not null)
+        {
+            var idx = _tasks.FindIndex(t => t.Id == task.Id);
+            if (idx >= 0) _tasks[idx] = r.Content;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog  = await DialogService.ShowAsync<TaskFormDialog>("Add Task", options);
+        var result  = await dialog.Result;
+
+        if (!result!.Canceled && result.Data is CreateTodoTaskRequest req)
+        {
+            var r = await TaskApi.CreateTodoTaskAsync(req with { TodoListId = ListId });
+            if (r.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Task added!", Severity.Success);
+                await LoadAsync();
+            }
+            else Snackbar.Add("Failed to create task.", Severity.Error);
+        }
+    }
+
+    private async Task OpenEditDialog(TodoTaskResponse task)
+    {
+        var parameters = new DialogParameters<TaskFormDialog>
+        {
+            { x => x.ExistingTask, task }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog  = await DialogService.ShowAsync<TaskFormDialog>("Edit Task", parameters, options);
+        var result  = await dialog.Result;
+
+        if (!result!.Canceled && result.Data is CreateTodoTaskRequest req)
+        {
+            var updateReq = new UpdateTodoTaskRequest(req.Title, req.Description, req.DueDate, req.Priority, req.CategoryId);
+            var r = await TaskApi.UpdateTodoTaskAsync(task.Id, updateReq);
+            if (r.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Task updated!", Severity.Success);
+                await LoadAsync();
+            }
+            else Snackbar.Add("Failed to update task.", Severity.Error);
+        }
+    }
+
+    private async Task DeleteTask(TodoTaskResponse task)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Task", $"Delete \"{task.Title}\"?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var r = await TaskApi.DeleteTodoTaskAsync(task.Id);
+            if (r.IsSuccessStatusCode)
+            {
+                _tasks.Remove(task);
+                Snackbar.Add("Task deleted.", Severity.Info);
+            }
+            else Snackbar.Add("Failed to delete task.", Severity.Error);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.OnTaskCreated -= OnRealTimeTaskCreated;
+        Realtime.OnTaskUpdated -= OnRealTimeTaskUpdated;
+        Realtime.OnTaskDeleted -= OnRealTimeTaskDeleted;
+        await Realtime.LeaveListAsync(ListId);
+    }
+}
