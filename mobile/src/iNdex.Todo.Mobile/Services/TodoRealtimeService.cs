@@ -1,5 +1,6 @@
 using iNdex.Todo.Mobile.Models;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 
 namespace iNdex.Todo.Mobile.Services;
 
@@ -18,7 +19,7 @@ public class TodoRealtimeService(IConfiguration config) : IAsyncDisposable
 
     public async Task ConnectAsync(Guid userId)
     {
-        var baseUrl = config["ApiBaseUrl"] ?? "https://localhost:5001";
+        var baseUrl = config["ApiBaseUrl"] ?? "https://localhost:51447";
 
         _hub = new HubConnectionBuilder()
             .WithUrl($"{baseUrl}/hubs/todo?userId={userId}")

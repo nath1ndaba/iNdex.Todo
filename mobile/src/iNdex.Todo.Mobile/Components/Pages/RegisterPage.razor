@@ -59,7 +59,10 @@
                    OnClick="Register"
                    Disabled="_loading"
                    Class="rounded-xl">
-            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
             Create Account
         </MudButton>
 
@@ -74,16 +77,16 @@
 
 @code {
     private string _firstName = string.Empty;
-    private string _lastName  = string.Empty;
-    private string _email     = string.Empty;
-    private string _password  = string.Empty;
-    private bool   _showPwd;
-    private bool   _loading;
+    private string _lastName = string.Empty;
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private bool _showPwd;
+    private bool _loading;
 
     private async Task Register()
     {
         if (string.IsNullOrWhiteSpace(_firstName) ||
-            string.IsNullOrWhiteSpace(_email)     ||
+            string.IsNullOrWhiteSpace(_email) ||
             string.IsNullOrWhiteSpace(_password))
         {
             Snackbar.Add("Please fill in all required fields.", Severity.Warning);

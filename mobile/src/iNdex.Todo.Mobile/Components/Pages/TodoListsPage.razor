@@ -50,7 +50,7 @@ else
                           Style="@($"border-left:4px solid {accent};position:relative;cursor:pointer")">
 
                     <!-- Click to open tasks -->
-                    <div @onclick="() => Nav.NavigateTo($"/lists/{list.Id}")" style="position:absolute;inset:0;z-index:0" />
+                    <div @onclick='() => Nav.NavigateTo($"/lists/{list.Id}")' style="position:absolute;inset:0;z-index:0" />
 
                     <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Class="mb-2">
                         <div style="z-index:1;flex:1">
@@ -115,8 +115,8 @@ else
     private async Task OpenCreateDialog()
     {
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog  = await DialogService.ShowAsync<ListFormDialog>("Create List", options);
-        var result  = await dialog.Result;
+        var dialog = await DialogService.ShowAsync<ListFormDialog>("Create List", options);
+        var result = await dialog.Result;
 
         if (!result!.Canceled && result.Data is CreateTodoListRequest req)
         {
@@ -137,8 +137,8 @@ else
             { x => x.ExistingList, list }
         };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog  = await DialogService.ShowAsync<ListFormDialog>("Edit List", parameters, options);
-        var result  = await dialog.Result;
+        var dialog = await DialogService.ShowAsync<ListFormDialog>("Edit List", parameters, options);
+        var result = await dialog.Result;
 
         if (!result!.Canceled && result.Data is CreateTodoListRequest req)
         {

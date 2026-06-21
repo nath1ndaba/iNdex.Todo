@@ -23,16 +23,19 @@
 <!-- Filter row -->
 <MudChipSet T="string" @bind-SelectedValue="_filterPriority" SelectionMode="SelectionMode.SingleSelection" Class="mb-4">
     <MudChip T="string" Value="@((string?)null)" Color="Color.Default" Variant="Variant.Outlined">All</MudChip>
-    <MudChip T="string" Value="Critical"  Color="Color.Error"   Variant="Variant.Outlined">🔴 Critical</MudChip>
-    <MudChip T="string" Value="High"      Color="Color.Warning" Variant="Variant.Outlined">🟠 High</MudChip>
-    <MudChip T="string" Value="Medium"    Color="Color.Info"    Variant="Variant.Outlined">🔵 Medium</MudChip>
-    <MudChip T="string" Value="Low"       Color="Color.Success" Variant="Variant.Outlined">🟢 Low</MudChip>
+    <MudChip T="string" Value='"Critical"' Color="Color.Error" Variant="Variant.Outlined">🔴 Critical</MudChip>
+    <MudChip T="string" Value='"High"' Color="Color.Warning" Variant="Variant.Outlined">🟠 High</MudChip>
+    <MudChip T="string" Value='"Medium"' Color="Color.Info" Variant="Variant.Outlined">🔵 Medium</MudChip>
+    <MudChip T="string" Value='"Low"' Color="Color.Success" Variant="Variant.Outlined">🟢 Low</MudChip>
 </MudChipSet>
 
 @if (_loading)
 {
     <MudStack Spacing="2">
-        @for (int i = 0; i < 5; i++) { <MudSkeleton Height="64px" Class="rounded-xl" /> }
+        @for (int i = 0; i < 5; i++)
+        {
+            <MudSkeleton Height="64px" Class="rounded-xl" />
+        }
     </MudStack>
 }
 else if (FilteredTasks.Count == 0)
@@ -70,7 +73,11 @@ else
         .OrderBy(t => t.IsCompleted)
         .ThenByDescending(t => t.Priority switch
         {
-            "Critical" => 4, "High" => 3, "Medium" => 2, "Low" => 1, _ => 0
+            "Critical" => 4,
+            "High" => 3,
+            "Medium" => 2,
+            "Low" => 1,
+            _ => 0
         })
         .ThenBy(t => t.DueDate ?? DateTime.MaxValue)
         .ToList();
@@ -114,9 +121,9 @@ else
     private async Task OpenEditDialog(TodoTaskResponse task)
     {
         var parameters = new DialogParameters<TaskFormDialog> { { x => x.ExistingTask, task } };
-        var dialog  = await DialogService.ShowAsync<TaskFormDialog>("Edit Task", parameters,
+        var dialog = await DialogService.ShowAsync<TaskFormDialog>("Edit Task", parameters,
             new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
-        var result  = await dialog.Result;
+        var result = await dialog.Result;
 
         if (!result!.Canceled && result.Data is CreateTodoTaskRequest req)
         {

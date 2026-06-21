@@ -35,10 +35,13 @@
         </MudText>
         <MudText Typo="Typo.body2" Style="opacity:.55">@DateTime.Now.ToString("dddd, MMMM d")</MudText>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Add"
-               OnClick="() => Nav.NavigateTo("/lists")"
-               Class="rounded-xl">New List</MudButton>
+               OnClick="@(() => Nav.NavigateTo("/lists"))"
+               Class="rounded-xl">
+        New List
+    </MudButton>
 </MudStack>
 
 <!-- ── Stats row ─────────────────────────────────────────────────────────── -->
@@ -53,7 +56,10 @@
         <StatCard Label="Completed" Value="@_completedTasks.ToString()" Icon="@Icons.Material.Filled.CheckCircle" Color="#F5A623" />
     </MudItem>
     <MudItem xs="6" sm="3">
-        <StatCard Label="Pending" Value="@(_totalTasks - _completedTasks).ToString()" Icon="@Icons.Material.Filled.Pending" Color="#EF4444" />
+        <StatCard Label="Pending"
+                  Value="@((_totalTasks - _completedTasks).ToString())"
+                  Icon="@Icons.Material.Filled.Pending"
+                  Color="#EF4444" />
     </MudItem>
 </MudGrid>
 
@@ -76,8 +82,7 @@ else if (_lists.Count == 0)
     <MudPaper Elevation="0" Class="pa-8 rounded-xl d-flex flex-column align-center" Style="border:2px dashed rgba(255,255,255,.12)">
         <MudIcon Icon="@Icons.Material.Outlined.PlaylistAdd" Style="font-size:3rem;opacity:.3" />
         <MudText Typo="Typo.body1" Class="mt-2 mb-4" Style="opacity:.5">No lists yet. Create your first one!</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="() => Nav.NavigateTo("/lists")" Class="rounded-xl">Create List</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick='() => Nav.NavigateTo("/lists")' Class="rounded-xl">Create List</MudButton>
     </MudPaper>
 }
 else
@@ -86,9 +91,10 @@ else
         @foreach (var list in _lists.Take(6))
         {
             <MudItem xs="12" sm="6" md="4">
-                <MudPaper Elevation="2" Class="pa-4 rounded-xl cursor-pointer mud-ripple"
+                <MudPaper Elevation="2"
+                          Class="pa-4 rounded-xl cursor-pointer mud-ripple"
                           Style="@($"border-left:4px solid {list.Color ?? "#00AEEF"};transition:transform .15s")"
-                          @onclick="() => Nav.NavigateTo($"/lists/{list.Id}")">
+                          @onclick='() => Nav.NavigateTo($"/lists/{list.Id}")'>
                     <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.subtitle1" Style="font-weight:700">@list.Name</MudText>
                         <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">

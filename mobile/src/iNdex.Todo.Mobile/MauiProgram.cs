@@ -10,9 +10,8 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-
         builder
-            .UseMaui()
+            .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -31,7 +30,7 @@ public static class MauiProgram
         });
 
         // ── Configuration ─────────────────────────────────────────────────────
-        var apiBaseUrl = "https://localhost:5001"; // Override in appsettings / env
+        var apiBaseUrl = "https://localhost:51447"; // Override in appsettings / env
 
         // ── Refit API clients ──────────────────────────────────────────────────
         var refitSettings = new RefitSettings

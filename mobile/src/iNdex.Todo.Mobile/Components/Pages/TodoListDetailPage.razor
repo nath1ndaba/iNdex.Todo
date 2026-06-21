@@ -13,7 +13,7 @@
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-1">
     <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
-                   OnClick="() => Nav.NavigateTo("/lists")" />
+                   OnClick="@(() => Nav.NavigateTo("/lists"))" />
     @if (_list is not null)
     {
         <div style="@($"width:10px;height:10px;border-radius:50%;background:{_list.Color ?? "#00AEEF"}")"></div>

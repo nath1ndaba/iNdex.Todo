@@ -56,7 +56,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     [Parameter] public TodoListResponse? ExistingList { get; set; }
 
     private string _name        = string.Empty;
