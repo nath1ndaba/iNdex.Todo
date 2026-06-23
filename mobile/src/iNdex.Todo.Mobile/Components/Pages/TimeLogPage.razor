@@ -1,0 +1,136 @@
+@page "/timelog"
+@inject ITimeLogApi TimeLogApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>Time Log – iNdex Todo</PageTitle>
+
+<!-- Header -->
+<div style="margin-bottom:20px">
+    <MudText Typo="Typo.h5" Style="font-weight:800">My Time</MudText>
+    <MudText Typo="Typo.caption" Style="opacity:.4">All hours logged by you</MudText>
+</div>
+
+<!-- Summary stats -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+    <div class="card" style="text-align:center;padding:16px 8px">
+        <MudText Style="font-size:1.6rem;font-weight:900;color:#00AEEF;line-height:1">
+            @_totalToday.ToString("0.##")
+        </MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4;margin-top:4px">Today</MudText>
+    </div>
+    <div class="card" style="text-align:center;padding:16px 8px">
+        <MudText Style="font-size:1.6rem;font-weight:900;color:#39D353;line-height:1">
+            @_totalWeek.ToString("0.##")
+        </MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4;margin-top:4px">This week</MudText>
+    </div>
+    <div class="card" style="text-align:center;padding:16px 8px">
+        <MudText Style="font-size:1.6rem;font-weight:900;color:#F5A623;line-height:1">
+            @_totalAll.ToString("0.##")
+        </MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4;margin-top:4px">All time</MudText>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (int i = 0; i < 5; i++) { <MudSkeleton Height="72px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" /> }
+    </MudStack>
+}
+else
+{
+    <div class="card" style="text-align:center;padding:48px 24px">
+        <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty"
+                 Style="font-size:3.5rem;opacity:.2;display:block;margin:0 auto 12px" />
+        <MudText Style="opacity:.4;font-weight:600">No time logged yet</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.25;margin-top:4px">
+            Open a ticket and tap "Log Time"
+        </MudText>
+    </div>
+}
+else
+{
+    @foreach (var group in _grouped)
+    {
+        <!-- Date group header -->
+        <div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px">
+            <MudText Typo="Typo.caption" Style="font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.4;white-space:nowrap">
+                @FormatGroupDate(group.Key)
+            </MudText>
+            <div style="flex:1;height:1px;background:rgba(255,255,255,.06)"></div>
+            <MudText Typo="Typo.caption" Style="opacity:.5;font-weight:700;white-space:nowrap">
+                @group.Sum(l => l.Hours).ToString("0.##") h
+            </MudText>
+        </div>
+
+        <MudStack Spacing="2">
+            @foreach (var log in group.OrderByDescending(l => l.LoggedDate))
+            {
+                <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer"
+                     @onclick='() => Nav.NavigateTo($"/tickets/{log.TicketId}")'>
+                    <!-- Hours badge -->
+                    <div style="width:48px;height:48px;border-radius:12px;background:rgba(0,174,239,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+                        <MudText Style="font-weight:900;color:#00AEEF;font-size:1rem;line-height:1">
+                            @log.Hours.ToString("0.#")
+                        </MudText>
+                        <MudText Style="font-size:9px;opacity:.5;line-height:1">h</MudText>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                            <span class="ticket-num">@log.TicketNumber</span>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            @log.Description
+                        </MudText>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Style="opacity:.25;flex-shrink:0" />
+                </div>
+            }
+        </MudStack>
+    }
+}
+
+@code {
+    private List<TimeLogResponse> _logs = [];
+    private bool _loading = true;
+
+    private IEnumerable<IGrouping<string, TimeLogResponse>> _grouped =>
+        _logs.GroupBy(l => l.LoggedDate.ToString("yyyy-MM-dd"))
+             .OrderByDescending(g => g.Key);
+
+    private decimal _totalToday => _logs
+        .Where(l => l.LoggedDate.Date == DateTime.UtcNow.Date).Sum(l => l.Hours);
+    private decimal _totalWeek => _logs
+        .Where(l => l.LoggedDate >= DateTime.UtcNow.AddDays(-7)).Sum(l => l.Hours);
+    private decimal _totalAll  => _logs.Sum(l => l.Hours);
+
+    private string FormatGroupDate(string dateKey)
+    {
+        if (DateTime.TryParse(dateKey, out var d))
+        {
+            if (d.Date == DateTime.UtcNow.Date) return "Today";
+            if (d.Date == DateTime.UtcNow.Date.AddDays(-1)) return "Yesterday";
+            return d.ToString("dddd, MMM d");
+        }
+        return dateKey;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        _loading = true;
+        try
+        {
+            var r = await TimeLogApi.GetTimeLogsByUserAsync(AppState.CurrentUser!.Id);
+            if (r.IsSuccessStatusCode) _logs = r.Content ?? [];
+        }
+        finally { _loading = false; }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

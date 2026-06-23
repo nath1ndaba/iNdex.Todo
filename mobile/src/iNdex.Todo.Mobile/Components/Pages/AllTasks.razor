@@ -1,0 +1,143 @@
+@page "/tasks"
+@inject AppState AppState
+@inject ITodoListApi ListApi
+@inject ITodoTaskApi TaskApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>All Tasks – iNdex Todo</PageTitle>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <MudText Typo="Typo.h5" Style="font-weight:800">All Tasks</MudText>
+    <MudTextField @bind-Value="_search" Placeholder="Search…"
+                  Variant="Variant.Outlined"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="200"
+                  Style="max-width:180px" />
+</div>
+
+<!-- Priority filter -->
+<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none">
+    @foreach (var (label, color) in _priorities)
+    {
+        var active = _priorityFilter == label;
+        <button @onclick="() => _priorityFilter = label"
+                style="@($"flex-shrink:0;padding:6px 14px;border-radius:99px;border:1px solid {(active ? color+"88" : "rgba(255,255,255,.1)")};background:{(active ? color+"22" : "transparent")};color:{(active ? color : "#64748B")};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s")">
+            @label
+        </button>
+    }
+</div>
+
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (var i = 0; i < 5; i++) { <MudSkeleton Height="68px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" /> }
+    </MudStack>
+}
+else if (FilteredTasks.Count == 0)
+{
+    <div class="card" style="text-align:center;padding:48px 24px">
+        <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Style="font-size:3rem;opacity:.2;display:block;margin:0 auto 12px" />
+        <MudText Style="opacity:.4;font-weight:600">No matching tasks</MudText>
+    </div>
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var task in FilteredTasks)
+        {
+            <TaskCard Task="task"
+                      OnComplete="() => ToggleComplete(task)"
+                      OnEdit="() => OpenEdit(task)"
+                      OnDelete="() => DeleteTask(task)" />
+        }
+    </MudStack>
+}
+
+@code {
+    private List<TodoTaskResponse> _tasks = [];
+    private bool _loading = true;
+    private string _search = string.Empty;
+    private string _priorityFilter = "All";
+
+    private readonly (string label, string color)[] _priorities =
+    [
+        ("All", "#64748B"), ("Critical", "#EF4444"), ("High", "#F5A623"),
+        ("Medium", "#00AEEF"), ("Low", "#39D353"), ("None", "#94A3B8")
+    ];
+
+    private List<TodoTaskResponse> FilteredTasks => _tasks
+        .Where(t => string.IsNullOrWhiteSpace(_search)
+                 || t.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                 || (t.Description?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(t => _priorityFilter == "All" || t.Priority == _priorityFilter)
+        .OrderBy(t => t.IsCompleted)
+        .ThenByDescending(t => t.Priority switch { "Critical"=>4,"High"=>3,"Medium"=>2,"Low"=>1,_=>0 })
+        .ThenBy(t => t.DueDate ?? DateTime.MaxValue)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var listsResp = await ListApi.GetAllTodoListsAsync(AppState.CurrentUser!.Id);
+            if (!listsResp.IsSuccessStatusCode || listsResp.Content is null) return;
+
+            var fetches = listsResp.Content.Select(l => TaskApi.GetTasksByListAsync(l.Id));
+            var results = await Task.WhenAll(fetches);
+            _tasks = results
+                .Where(r => r.IsSuccessStatusCode && r.Content is not null)
+                .SelectMany(r => r.Content!)
+                .ToList();
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task ToggleComplete(TodoTaskResponse task)
+    {
+        var r = await TaskApi.CompleteTaskAsync(task.Id, new(!task.IsCompleted));
+        if (r.IsSuccessStatusCode && r.Content is not null)
+        {
+            var i = _tasks.FindIndex(t => t.Id == task.Id);
+            if (i >= 0) _tasks[i] = r.Content;
+        }
+    }
+
+    private async Task OpenEdit(TodoTaskResponse task)
+    {
+        var p = new DialogParameters<TaskFormDialog> { { x => x.ExistingTask, task } };
+        var d = await DialogService.ShowAsync<TaskFormDialog>("Edit Task", p,
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+        var result = await d.Result;
+        if (!result!.Canceled && result.Data is CreateTodoTaskRequest req)
+        {
+            var upd = new UpdateTodoTaskRequest(req.Title, req.Description, req.DueDate, req.Priority, req.CategoryId);
+            var r = await TaskApi.UpdateTodoTaskAsync(task.Id, upd);
+            if (r.IsSuccessStatusCode) { Snackbar.Add("Task updated!", Severity.Success); await LoadAsync(); }
+        }
+    }
+
+    private async Task DeleteTask(TodoTaskResponse task)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete Task",
+            $"Delete \"{task.Title}\"?", yesText: "Delete", cancelText: "Cancel");
+        if (ok == true)
+        {
+            var r = await TaskApi.DeleteTodoTaskAsync(task.Id);
+            if (r.IsSuccessStatusCode) { _tasks.Remove(task); Snackbar.Add("Deleted.", Severity.Info); }
+        }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

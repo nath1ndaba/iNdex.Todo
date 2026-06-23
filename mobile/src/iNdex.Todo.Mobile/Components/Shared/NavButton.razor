@@ -1,0 +1,17 @@
+@inject NavigationManager Nav
+
+<button class="bottom-nav-item @(Active ? "active" : "")" @onclick="Navigate">
+    <div class="nav-icon">
+        <MudIcon Icon="@Icon" Size="Size.Small" />
+    </div>
+    <span>@Label</span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Href  { get; set; } = "/";
+    [Parameter, EditorRequired] public string Icon  { get; set; } = "";
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public bool Active { get; set; }
+
+    private void Navigate() => Nav.NavigateTo(Href);
+}

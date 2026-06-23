@@ -3,6 +3,44 @@ using Refit;
 
 namespace iNdex.Todo.Mobile.Services;
 
+// ── Ticket API ────────────────────────────────────────────────────────────────
+public interface ITicketApi
+{
+    [Post("/api/tickets")]
+    Task<ApiResponse<TicketResponse>> CreateTicketAsync([Body] CreateTicketRequest request);
+
+    [Get("/api/tickets")]
+    Task<ApiResponse<List<TicketResponse>>> GetAllTicketsAsync();
+
+    [Get("/api/tickets/assigned/{userId}")]
+    Task<ApiResponse<List<TicketResponse>>> GetTicketsByUserAsync(Guid userId);
+
+    [Get("/api/tickets/{id}")]
+    Task<ApiResponse<TicketResponse>> GetTicketByIdAsync(Guid id);
+
+    [Put("/api/tickets/{id}")]
+    Task<ApiResponse<TicketResponse>> UpdateTicketAsync(Guid id, [Body] UpdateTicketRequest request);
+
+    [Delete("/api/tickets/{id}")]
+    Task<IApiResponse> DeleteTicketAsync(Guid id);
+}
+
+// ── TimeLog API ────────────────────────────────────────────────────────────────
+public interface ITimeLogApi
+{
+    [Post("/api/timelogs")]
+    Task<ApiResponse<TimeLogResponse>> LogTimeAsync([Body] LogTimeRequest request);
+
+    [Get("/api/timelogs/ticket/{ticketId}")]
+    Task<ApiResponse<TimeLogSummaryResponse>> GetTimeLogsByTicketAsync(Guid ticketId);
+
+    [Get("/api/timelogs/user/{userId}")]
+    Task<ApiResponse<List<TimeLogResponse>>> GetTimeLogsByUserAsync(Guid userId);
+
+    [Delete("/api/timelogs/{id}")]
+    Task<IApiResponse> DeleteTimeLogAsync(Guid id);
+}
+
 // ── Auth API ──────────────────────────────────────────────────────────────────
 public interface IAuthApi
 {
@@ -25,8 +63,8 @@ public interface IAuthApi
 // ── Users API ─────────────────────────────────────────────────────────────────
 public interface IUserApi
 {
-    [Post("/api/users")]
-    Task<ApiResponse<CreatedResponse>> RegisterUserAsync([Body] RegisterUserRequest request);
+    [Get("/api/users")]
+    Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync();
 
     [Get("/api/users/{id}")]
     Task<ApiResponse<UserResponse>> GetUserByIdAsync(Guid id);

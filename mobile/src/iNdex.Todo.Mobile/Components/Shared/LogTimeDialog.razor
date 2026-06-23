@@ -1,0 +1,105 @@
+@inject ITimeLogApi TimeLogApi
+@inject AppState AppState
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div style="display:flex;align-items:center;gap:8px">
+            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" />
+            <MudText Style="font-weight:700">Log Time</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3" Class="pt-1">
+
+            <!-- Big hours input -->
+            <div style="text-align:center;padding:16px 0">
+                <MudText Typo="Typo.caption" Style="opacity:.4;text-transform:uppercase;letter-spacing:.8px">Hours spent</MudText>
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px">
+                    <button @onclick="() => AdjustHours(-0.5m)"
+                            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#F1F5F9;font-size:1.2rem;cursor:pointer">
+                        –
+                    </button>
+                    <MudText Style="font-size:2.5rem;font-weight:900;color:#00AEEF;min-width:80px;text-align:center">
+                        @_hours.ToString("0.##")
+                    </MudText>
+                    <button @onclick="() => AdjustHours(0.5m)"
+                            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#F1F5F9;font-size:1.2rem;cursor:pointer">
+                        +
+                    </button>
+                </div>
+                <!-- Quick select pills -->
+                <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+                    @foreach (var h in new[] { 0.5m, 1m, 1.5m, 2m, 3m, 4m, 6m, 8m })
+                    {
+                        <button @onclick="() => _hours = h"
+                                style="@($"padding:4px 12px;border-radius:99px;border:1px solid {(_hours==h?"#00AEEF":"rgba(255,255,255,.1)")};background:{(_hours==h?"rgba(0,174,239,.15)":"transparent")};color:{(_hours==h?"#00AEEF":"#64748B")};font-size:12px;font-weight:600;cursor:pointer;transition:all .15s")">
+                            @h h
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <MudTextField @bind-Value="_description"
+                          Label="What did you work on? *"
+                          Variant="Variant.Outlined"
+                          Lines="2" MaxLength="1000" FullWidth="true"
+                          Placeholder="e.g. Frontend — Login page, auth flow" />
+
+            <MudDatePicker @bind-Date="_logDate"
+                           Label="Date"
+                           Variant="Variant.Outlined"
+                           Editable="true" MaxDate="DateTime.Today" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="rounded-xl"
+                   Disabled="@(_hours <= 0 || string.IsNullOrWhiteSpace(_description) || _saving)"
+                   OnClick="Submit">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Log @_hours h
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter, EditorRequired] public Guid TicketId { get; set; }
+
+    private decimal   _hours       = 1m;
+    private string    _description = string.Empty;
+    private DateTime? _logDate     = DateTime.Today;
+    private bool      _saving;
+
+    private void AdjustHours(decimal delta)
+    {
+        _hours = Math.Max(0.5m, Math.Min(24m, _hours + delta));
+    }
+
+    private async Task Submit()
+    {
+        _saving = true;
+        try
+        {
+            var req = new LogTimeRequest(
+                TicketId,
+                AppState.CurrentUser!.Id,
+                _hours,
+                _description.Trim(),
+                _logDate?.ToUniversalTime());
+
+            var r = await TimeLogApi.LogTimeAsync(req);
+            if (!r.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Failed to log time.", Severity.Error);
+                return;
+            }
+            Snackbar.Add($"{_hours}h logged successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

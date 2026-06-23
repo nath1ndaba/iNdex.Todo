@@ -1,0 +1,178 @@
+@page "/tickets"
+@inject ITicketApi TicketApi
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Tickets – iNdex Todo</PageTitle>
+
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:800">Tickets</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.45">@_filtered.Count open</MudText>
+    </div>
+    <button class="fab" style="position:relative;bottom:auto;right:auto;width:44px;height:44px;border-radius:14px"
+            @onclick="OpenCreate">
+        <MudIcon Icon="@Icons.Material.Filled.Add" />
+    </button>
+</div>
+
+<!-- Status filter chips -->
+<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none">
+    @foreach (var s in _statuses)
+    {
+        <button @onclick="() => _statusFilter = s.Key"
+                style="@($"flex-shrink:0;padding:6px 14px;border-radius:99px;border:1px solid {(_statusFilter==s.Key ? s.Color+"88" : "rgba(255,255,255,.1)")};background:{(_statusFilter==s.Key ? s.Color+"22" : "transparent")};color:{(_statusFilter==s.Key ? s.Color : "#64748B")};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s")">
+            @s.Key
+        </button>
+    }
+</div>
+
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (int i = 0; i < 4; i++) { <MudSkeleton Height="88px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" /> }
+    </MudStack>
+}
+else if (_filtered.Count == 0)
+{
+    <div class="card" style="text-align:center;padding:48px 24px">
+        <MudIcon Icon="@Icons.Material.Outlined.ConfirmationNumber" Style="font-size:3.5rem;opacity:.2;display:block;margin:0 auto 12px" />
+        <MudText Style="opacity:.4;font-weight:600">No @(_statusFilter == "All" ? "" : _statusFilter) tickets</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.25;margin-top:4px">Tap + to create one</MudText>
+    </div>
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var t in _filtered)
+        {
+            <div class="card @GetGlowClass(t.Priority)" style="cursor:pointer"
+                 @onclick="@(() => Nav.NavigateTo($"/tickets/{t.Id}"))">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+                    <div style="flex:1;min-width:0">
+                        <span class="ticket-num">@t.TicketNumber</span>
+                        <MudText Style="font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            @t.Title
+                        </MudText>
+                    </div>
+                    <span class="status-pill @GetPillClass(t.Status)" style="margin-left:8px;flex-shrink:0">
+                        @t.Status
+                    </span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <!-- Priority -->
+                    <div style="display:flex;align-items:center;gap:4px;font-size:11px;opacity:.6">
+                        <MudIcon Icon="@t.Priority.ToIcon()" Size="Size.Small" Color="@t.Priority.ToColor()" Style="font-size:14px" />
+                        <span>@t.Priority</span>
+                    </div>
+
+                    <!-- Type -->
+                    <div style="display:flex;align-items:center;gap:4px;font-size:11px;opacity:.6">
+                        <MudIcon Icon="@t.Type.TypeIcon()" Size="Size.Small" Style="font-size:14px" />
+                        <span>@t.Type</span>
+                    </div>
+
+                    @if (t.AssignedToName is not null)
+                    {
+                        <div style="display:flex;align-items:center;gap:5px;font-size:11px;opacity:.7;margin-left:auto">
+                            <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#0050A0,#00AEEF);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0">
+                                @t.AssignedToName[0]
+                            </div>
+                            <span>@t.AssignedToName.Split(' ')[0]</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Time progress -->
+                @if (t.EstimatedHours > 0)
+                {
+                    var pct = Math.Min(100, (double)t.TotalLoggedHours / t.EstimatedHours * 100);
+                    <div style="margin-top:10px">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;opacity:.45;margin-bottom:4px">
+                            <span>@t.TotalLoggedHours h logged</span>
+                            <span>@t.EstimatedHours h estimated</span>
+                        </div>
+                        <div class="time-bar">
+                            <div class="time-bar-fill @(pct >= 100 ? "over" : "")"
+                                 style="@($"width:{pct}%")"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </MudStack>
+}
+
+<button class="fab" @onclick="OpenCreate">
+    <MudIcon Icon="@Icons.Material.Filled.Add" />
+</button>
+
+@code {
+    record StatusConfig(string Key, string Color);
+    private readonly List<StatusConfig> _statuses =
+    [
+        new("All", "#64748B"),
+        new("Open", "#94A3B8"),
+        new("InProgress", "#00AEEF"),
+        new("InReview", "#F5A623"),
+        new("Done", "#39D353"),
+        new("Cancelled", "#EF4444"),
+    ];
+
+    private List<TicketResponse> _tickets = [];
+    private string _statusFilter = "All";
+    private bool _loading = true;
+
+    private List<TicketResponse> _filtered => _statusFilter == "All"
+        ? _tickets
+        : _tickets.Where(t => t.Status == _statusFilter).ToList();
+
+    private string GetGlowClass(string p) => p switch
+    {
+        "Critical" or "High" => "card-glow-orange",
+        "Medium"             => "card-glow-blue",
+        _                    => ""
+    };
+
+    private string GetPillClass(string s) => s switch
+    {
+        "InProgress" => "pill-inprogress",
+        "InReview"   => "pill-inreview",
+        "Done"       => "pill-done",
+        "Cancelled"  => "pill-cancelled",
+        _            => "pill-open"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var r = await TicketApi.GetAllTicketsAsync();
+            if (r.IsSuccessStatusCode) _tickets = r.Content ?? [];
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreate()
+    {
+        var options = new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<TicketFormDialog>("New Ticket", options);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadAsync();
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

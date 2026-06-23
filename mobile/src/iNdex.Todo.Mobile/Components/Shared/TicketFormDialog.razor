@@ -1,0 +1,184 @@
+@inject ITicketApi TicketApi
+@inject IUserApi UserApi
+@inject AppState AppState
+@inject ISnackbar Snackbar
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div style="display:flex;align-items:center;gap:8px">
+            <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Color="Color.Primary" />
+            <MudText Style="font-weight:700">@(Existing is null ? "New Ticket" : "Edit Ticket")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3" Class="pt-1">
+            <MudTextField @bind-Value="_title" Label="Title *"
+                          Variant="Variant.Outlined" FullWidth="true" MaxLength="500" />
+
+            <MudTextField @bind-Value="_description" Label="Description"
+                          Variant="Variant.Outlined" Lines="3" MaxLength="5000" FullWidth="true" />
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6">
+                    <MudSelect T="int" @bind-Value="_priority" Label="Priority"
+                               Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelectItem T="int" Value="0">None</MudSelectItem>
+                        <MudSelectItem T="int" Value="1">Low</MudSelectItem>
+                        <MudSelectItem T="int" Value="2">Medium</MudSelectItem>
+                        <MudSelectItem T="int" Value="3">High</MudSelectItem>
+                        <MudSelectItem T="int" Value="4">Critical</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect T="int" @bind-Value="_type" Label="Type"
+                               Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelectItem T="int" Value="0">Task</MudSelectItem>
+                        <MudSelectItem T="int" Value="1">Bug</MudSelectItem>
+                        <MudSelectItem T="int" Value="2">Feature</MudSelectItem>
+                        <MudSelectItem T="int" Value="3">Improvement</MudSelectItem>
+                        <MudSelectItem T="int" Value="4">Research</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (Existing is not null)
+            {
+                <MudSelect T="int" @bind-Value="_status" Label="Status"
+                           Variant="Variant.Outlined" FullWidth="true">
+                    <MudSelectItem T="int" Value="0">Open</MudSelectItem>
+                    <MudSelectItem T="int" Value="1">In Progress</MudSelectItem>
+                    <MudSelectItem T="int" Value="2">In Review</MudSelectItem>
+                    <MudSelectItem T="int" Value="3">Done</MudSelectItem>
+                    <MudSelectItem T="int" Value="4">Cancelled</MudSelectItem>
+                </MudSelect>
+            }
+
+            <MudNumericField T="int" @bind-Value="_estimatedHours"
+                             Label="Estimated hours" Variant="Variant.Outlined"
+                             Min="0" Max="9999" FullWidth="true" />
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_startDate" Label="Start date"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_dueDate" Label="Due date"
+                                   Variant="Variant.Outlined" Editable="true" />
+                </MudItem>
+            </MudGrid>
+
+            <!-- Assign to user -->
+            <MudText Typo="Typo.caption" Style="opacity:.5;margin-bottom:-8px">Assign to</MudText>
+            @if (_loadingUsers)
+            {
+                <MudSkeleton Height="56px" />
+            }
+            else
+            {
+                <MudSelect T="Guid?" @bind-Value="_assignedTo" Label="Assignee (optional)"
+                           Variant="Variant.Outlined" FullWidth="true" Clearable="true">
+                    @foreach (var u in _users)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)u.Id)">
+                            @u.FirstName @u.LastName
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="rounded-xl"
+                   Disabled="@(string.IsNullOrWhiteSpace(_title) || _saving)"
+                   OnClick="Submit">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            @(Existing is null ? "Create" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public TicketResponse? Existing { get; set; }
+
+    private string _title        = string.Empty;
+    private string _description  = string.Empty;
+    private int    _priority     = 2;
+    private int    _type         = 0;
+    private int    _status       = 0;
+    private int    _estimatedHours = 0;
+    private DateTime? _startDate = null;
+    private DateTime? _dueDate   = null;
+    private Guid?  _assignedTo   = null;
+    private bool   _saving;
+    private bool   _loadingUsers = true;
+    private List<UserResponse> _users = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Existing is not null)
+        {
+            _title          = Existing.Title;
+            _description    = Existing.Description ?? string.Empty;
+            _priority       = Existing.Priority switch { "Critical"=>4,"High"=>3,"Medium"=>2,"Low"=>1,_=>0 };
+            _type           = Existing.Type switch { "Bug"=>1,"Feature"=>2,"Improvement"=>3,"Research"=>4,_=>0 };
+            _status         = Existing.Status switch { "InProgress"=>1,"InReview"=>2,"Done"=>3,"Cancelled"=>4,_=>0 };
+            _estimatedHours = Existing.EstimatedHours;
+            _startDate      = Existing.StartDate?.ToLocalTime();
+            _dueDate        = Existing.DueDate?.ToLocalTime();
+            _assignedTo     = Existing.AssignedToUserId;
+        }
+
+        // Load all users for the assignee picker
+        _loadingUsers = true;
+        try
+        {
+            var r = await UserApi.GetAllUsersAsync();
+            if (r.IsSuccessStatusCode && r.Content is not null)
+                _users = r.Content;
+            else
+                _users = [AppState.CurrentUser!];
+        }
+        catch
+        {
+            _users = [AppState.CurrentUser!];
+        }
+        finally { _loadingUsers = false; }
+    }
+
+    private async Task Submit()
+    {
+        _saving = true;
+        try
+        {
+            if (Existing is null)
+            {
+                var req = new CreateTicketRequest(_title.Trim(), NullIfEmpty(_description),
+                    _priority, _type, _dueDate?.ToUniversalTime(), _startDate?.ToUniversalTime(),
+                    _estimatedHours, AppState.CurrentUser!.Id, _assignedTo);
+
+                var r = await TicketApi.CreateTicketAsync(req);
+                if (!r.IsSuccessStatusCode) { Snackbar.Add("Failed to create ticket.", Severity.Error); return; }
+                Snackbar.Add("Ticket created!", Severity.Success);
+            }
+            else
+            {
+                var req = new UpdateTicketRequest(_title.Trim(), NullIfEmpty(_description),
+                    _priority, _type, _status, _dueDate?.ToUniversalTime(), _startDate?.ToUniversalTime(),
+                    _estimatedHours, _assignedTo);
+
+                var r = await TicketApi.UpdateTicketAsync(Existing.Id, req);
+                if (!r.IsSuccessStatusCode) { Snackbar.Add("Failed to update ticket.", Severity.Error); return; }
+                Snackbar.Add("Ticket updated!", Severity.Success);
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        finally { _saving = false; }
+    }
+
+    private string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+    private void Cancel() => MudDialog.Cancel();
+}

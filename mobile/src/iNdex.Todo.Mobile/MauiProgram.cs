@@ -10,6 +10,7 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
         builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -59,6 +60,16 @@ public static class MauiProgram
 
         builder.Services
             .AddRefitClient<ITodoTaskApi>(refitSettings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBaseUrl))
+            .AddHttpMessageHandler<AuthTokenHandler>();
+
+        builder.Services
+            .AddRefitClient<ITicketApi>(refitSettings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBaseUrl))
+            .AddHttpMessageHandler<AuthTokenHandler>();
+
+        builder.Services
+            .AddRefitClient<ITimeLogApi>(refitSettings)
             .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBaseUrl))
             .AddHttpMessageHandler<AuthTokenHandler>();
 

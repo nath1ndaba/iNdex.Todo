@@ -1,0 +1,263 @@
+@page "/tickets/{Id:guid}"
+@inject ITicketApi TicketApi
+@inject ITimeLogApi TimeLogApi
+@inject AppState AppState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@(_ticket?.TicketNumber ?? "Ticket") – iNdex Todo</PageTitle>
+
+@if (_loading)
+{
+    <MudStack Spacing="3">
+        <MudSkeleton Height="24px" Width="120px" />
+        <MudSkeleton Height="40px" />
+        <MudSkeleton Height="100px" />
+    </MudStack>
+}
+else if (_ticket is null)
+{
+    <div style="text-align:center;padding:48px 0">
+        <MudText Style="opacity:.4">Ticket not found.</MudText>
+        <MudButton OnClick='() => Nav.NavigateTo("/tickets")' Class="mt-3">Back to Tickets</MudButton>
+    </div>
+}
+else
+{
+    <!-- Back + actions -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <button @onclick='() => Nav.NavigateTo("/tickets")'
+                style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#64748B;cursor:pointer;font-size:14px;padding:0">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            Tickets
+        </button>
+        <div style="display:flex;gap:8px">
+            <button @onclick="OpenEdit"
+                    style="padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#F1F5F9;font-size:13px;cursor:pointer">
+                Edit
+            </button>
+        </div>
+    </div>
+
+    <!-- Ticket header card -->
+    <div class="card card-glow-blue" style="margin-bottom:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+            <span class="ticket-num">@_ticket.TicketNumber</span>
+            <span class="status-pill @GetPillClass(_ticket.Status)">@_ticket.Status</span>
+        </div>
+        <MudText Style="font-weight:800;font-size:1.15rem;line-height:1.3;margin-bottom:8px">
+            @_ticket.Title
+        </MudText>
+        @if (!string.IsNullOrEmpty(_ticket.Description))
+        {
+            <MudText Typo="Typo.body2" Style="opacity:.55;line-height:1.6">@_ticket.Description</MudText>
+        }
+
+        <!-- Meta row -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.05)">
+                <MudIcon Icon="@_ticket.Priority.ToIcon()" Size="Size.Small" Color="@_ticket.Priority.ToColor()" Style="font-size:15px" />
+                @_ticket.Priority
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.05)">
+                <MudIcon Icon="@_ticket.Type.TypeIcon()" Size="Size.Small" Style="font-size:15px;opacity:.6" />
+                @_ticket.Type
+            </span>
+            @if (_ticket.DueDate.HasValue)
+            {
+                var overdue = _ticket.Status != "Done" && _ticket.DueDate.Value < DateTime.UtcNow;
+                <span style="@($"display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:8px;background:{( overdue ? "rgba(239,68,68,.12)" : "rgba(255,255,255,.05)")};color:{( overdue ? "#EF4444" : "inherit")}")">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="font-size:14px" />
+                    @_ticket.DueDate.Value.ToString("MMM d, yyyy")
+                </span>
+            }
+        </div>
+    </div>
+
+    <!-- Assignment card -->
+    <div class="card" style="margin-bottom:16px">
+        <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:block">
+            People
+        </MudText>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div>
+                <MudText Typo="Typo.caption" Style="opacity:.4;margin-bottom:6px;display:block">Created by</MudText>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1A6B30,#39D353);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">
+                        @_ticket.CreatedByName[0]
+                    </div>
+                    <MudText Typo="Typo.body2" Style="font-weight:600">@_ticket.CreatedByName</MudText>
+                </div>
+            </div>
+            @if (_ticket.AssignedToName is not null)
+            {
+                <div>
+                    <MudText Typo="Typo.caption" Style="opacity:.4;margin-bottom:6px;display:block">Assigned to</MudText>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0050A0,#00AEEF);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white">
+                            @_ticket.AssignedToName[0]
+                        </div>
+                        <MudText Typo="Typo.body2" Style="font-weight:600">@_ticket.AssignedToName</MudText>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Time tracking card -->
+    <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+                Time Tracking
+            </MudText>
+            <button @onclick="OpenLogTime"
+                    style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1px solid rgba(0,174,239,.3);background:rgba(0,174,239,.08);color:#00AEEF;font-size:12px;font-weight:600;cursor:pointer">
+                <MudIcon Icon="@Icons.Material.Filled.AddCircleOutline" Size="Size.Small" Style="font-size:15px" />
+                Log Time
+            </button>
+        </div>
+
+        <!-- Hours summary -->
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div>
+                <MudText Style="font-size:1.6rem;font-weight:800;color:#00AEEF;line-height:1">
+                    @_summary?.TotalHours.ToString("0.##")h
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.4">logged</MudText>
+            </div>
+            <div style="text-align:right">
+                <MudText Style="font-size:1.6rem;font-weight:800;line-height:1">
+                    @_ticket.EstimatedHours h
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.4">estimated</MudText>
+            </div>
+            <div style="text-align:right">
+                <MudText Style="@($"font-size:1.6rem;font-weight:800;line-height:1;color:{(_summary is not null && _summary.RemainingHours <= 0 ? "#EF4444" : "#39D353")}")">
+                    @(_summary is null ? "–" : _summary.RemainingHours.ToString("0.##") + "h")
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.4">remaining</MudText>
+            </div>
+        </div>
+
+        @if (_ticket.EstimatedHours > 0 && _summary is not null)
+        {
+            var pct = Math.Min(100, (double)_summary.TotalHours / _ticket.EstimatedHours * 100);
+            <div class="time-bar" style="margin-bottom:16px">
+                <div class="time-bar-fill @(pct >= 100 ? "over" : "")" style="@($"width:{pct}%")"></div>
+            </div>
+        }
+
+        <!-- Individual log entries -->
+        @if (_summary?.Logs.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:8px">
+                Log Entries
+            </MudText>
+            <MudStack Spacing="2">
+                @foreach (var log in _summary.Logs)
+                {
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04)">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(0,174,239,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <MudText Style="font-weight:800;color:#00AEEF;font-size:.85rem">@log.Hours h</MudText>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <MudText Typo="Typo.body2" Style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                @log.Description
+                            </MudText>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+                                <MudText Typo="Typo.caption" Style="opacity:.4">@log.UserName</MudText>
+                                <span style="opacity:.2;font-size:10px">•</span>
+                                <MudText Typo="Typo.caption" Style="opacity:.4">@log.LoggedDate.ToString("MMM d")</MudText>
+                            </div>
+                        </div>
+                        @if (log.UserId == AppState.CurrentUser!.Id)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
+                                           Size="Size.Small" Color="Color.Error"
+                                           OnClick="() => DeleteLog(log.Id)" />
+                        }
+                    </div>
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.3;text-align:center;display:block;padding:12px 0">
+                No time logged yet
+            </MudText>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private TicketResponse? _ticket;
+    private TimeLogSummaryResponse? _summary;
+    private bool _loading = true;
+
+    private string GetPillClass(string s) => s switch
+    {
+        "InProgress" => "pill-inprogress",
+        "InReview"   => "pill-inreview",
+        "Done"       => "pill-done",
+        "Cancelled"  => "pill-cancelled",
+        _ => "pill-open"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var t = await TicketApi.GetTicketByIdAsync(Id);
+            if (t.IsSuccessStatusCode) _ticket = t.Content;
+
+            var s = await TimeLogApi.GetTimeLogsByTicketAsync(Id);
+            if (s.IsSuccessStatusCode) _summary = s.Content;
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenLogTime()
+    {
+        var p = new DialogParameters<LogTimeDialog> { { x => x.TicketId, Id } };
+        var d = await DialogService.ShowAsync<LogTimeDialog>("Log Time",
+            p, new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+        var r = await d.Result;
+        if (!r!.Canceled) await LoadAsync();
+    }
+
+    private async Task OpenEdit()
+    {
+        if (_ticket is null) return;
+        var p = new DialogParameters<TicketFormDialog> { { x => x.Existing, _ticket } };
+        var d = await DialogService.ShowAsync<TicketFormDialog>("Edit Ticket",
+            p, new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+        var r = await d.Result;
+        if (!r!.Canceled) await LoadAsync();
+    }
+
+    private async Task DeleteLog(Guid logId)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete entry",
+            "Remove this time log?", yesText: "Delete", cancelText: "Cancel");
+        if (ok == true)
+        {
+            await TimeLogApi.DeleteTimeLogAsync(logId);
+            Snackbar.Add("Time log removed.", Severity.Info);
+            await LoadAsync();
+        }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

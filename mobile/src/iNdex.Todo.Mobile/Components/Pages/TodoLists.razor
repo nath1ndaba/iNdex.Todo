@@ -1,0 +1,149 @@
+@page "/lists"
+@inject AppState AppState
+@inject ITodoListApi ListApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Tasks – iNdex Todo</PageTitle>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:800">My Lists</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4">@_lists.Count lists</MudText>
+    </div>
+    <button class="fab" style="position:relative;bottom:auto;right:auto;width:44px;height:44px;border-radius:14px"
+            @onclick="OpenCreate">
+        <MudIcon Icon="@Icons.Material.Filled.Add" />
+    </button>
+</div>
+
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="100px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" /> }
+    </MudStack>
+}
+else if (_lists.Count == 0)
+{
+    <div class="card" style="text-align:center;padding:48px 24px">
+        <MudIcon Icon="@Icons.Material.Outlined.PlaylistAdd" Style="font-size:3.5rem;opacity:.2;display:block;margin:0 auto 12px" />
+        <MudText Style="opacity:.4;font-weight:600">No lists yet</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.25;margin-top:4px">Tap + to create your first list</MudText>
+    </div>
+}
+else
+{
+    <MudGrid Spacing="3">
+        @foreach (var list in _lists)
+        {
+            var accent = list.Color ?? "#00AEEF";
+            <MudItem xs="12" sm="6">
+                <div class="card"
+                     style="@($"border-left:3px solid {accent};cursor:pointer;position:relative")"
+                     @onclick="@(() => Nav.NavigateTo($"/lists/{list.Id}"))">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                        <div style="flex:1;min-width:0">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                @if (!string.IsNullOrEmpty(list.Icon))
+                                {
+                                    <span style="font-size:1.2rem">@list.Icon</span>
+                                }
+                                <MudText Style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                    @list.Name
+                                </MudText>
+                            </div>
+                            @if (!string.IsNullOrEmpty(list.Description))
+                            {
+                                <MudText Typo="Typo.caption" Style="opacity:.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">
+                                    @list.Description
+                                </MudText>
+                            }
+                        </div>
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                                 Style="z-index:10">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="() => OpenEdit(list)">Edit</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                                         OnClick="() => DeleteList(list)">Delete</MudMenuItem>
+                        </MudMenu>
+                    </div>
+                    <div style="@($"display:inline-flex;align-items:center;gap:5px;margin-top:12px;padding:4px 10px;border-radius:8px;background:{accent}18;font-size:12px;font-weight:600;color:{accent}")">
+                        <MudIcon Icon="@Icons.Material.Filled.Task" Style="font-size:13px" />
+                        @list.TaskCount @(list.TaskCount == 1 ? "task" : "tasks")
+                    </div>
+                </div>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<button class="fab" @onclick="OpenCreate">
+    <MudIcon Icon="@Icons.Material.Filled.Add" />
+</button>
+
+@code {
+    private List<TodoListResponse> _lists = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var r = await ListApi.GetAllTodoListsAsync(AppState.CurrentUser!.Id);
+            if (r.IsSuccessStatusCode) _lists = r.Content ?? [];
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreate()
+    {
+        var d = await DialogService.ShowAsync<ListFormDialog>("New List",
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+        var result = await d.Result;
+        if (!result!.Canceled && result.Data is CreateTodoListRequest req)
+        {
+            var r = await ListApi.CreateTodoListAsync(req with { OwnerId = AppState.CurrentUser!.Id });
+            if (r.IsSuccessStatusCode) { Snackbar.Add("List created!", Severity.Success); await LoadAsync(); }
+            else Snackbar.Add("Failed to create list.", Severity.Error);
+        }
+    }
+
+    private async Task OpenEdit(TodoListResponse list)
+    {
+        var p = new DialogParameters<ListFormDialog> { { x => x.ExistingList, list } };
+        var d = await DialogService.ShowAsync<ListFormDialog>("Edit List", p,
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small });
+        var result = await d.Result;
+        if (!result!.Canceled && result.Data is CreateTodoListRequest req)
+        {
+            var upd = new UpdateTodoListRequest(req.Name, req.Description, req.Color, req.Icon);
+            var r = await ListApi.UpdateTodoListAsync(list.Id, upd);
+            if (r.IsSuccessStatusCode) { Snackbar.Add("List updated!", Severity.Success); await LoadAsync(); }
+            else Snackbar.Add("Failed to update list.", Severity.Error);
+        }
+    }
+
+    private async Task DeleteList(TodoListResponse list)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete List",
+            $"Delete \"{list.Name}\" and all its tasks?", yesText: "Delete", cancelText: "Cancel");
+        if (ok == true)
+        {
+            var r = await ListApi.DeleteTodoListAsync(list.Id);
+            if (r.IsSuccessStatusCode) { Snackbar.Add("List deleted.", Severity.Info); await LoadAsync(); }
+            else Snackbar.Add("Failed to delete.", Severity.Error);
+        }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

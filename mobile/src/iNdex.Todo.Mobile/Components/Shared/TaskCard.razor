@@ -1,78 +1,49 @@
 @* Shared/TaskCard.razor *@
 
-<MudPaper Elevation="1" Class="pa-3 rounded-xl" Style="@_cardStyle">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+<div class="card" style="@($"display:flex;align-items:center;gap:12px;{(Task.IsCompleted ? "opacity:.55" : "")}")">
+    <MudCheckBox T="bool"
+                 Value="@Task.IsCompleted"
+                 ValueChanged="@(_ => OnComplete.InvokeAsync())"
+                 Color="Color.Secondary"
+                 Size="Size.Medium" />
 
-        <!-- Complete checkbox -->
-        <MudCheckBox T="bool"
-                     Value="@Task.IsCompleted"
-                     ValueChanged="@(_ => OnComplete.InvokeAsync())"
-                     Color="Color.Secondary"
-                     Size="Size.Medium" />
-
-        <!-- Task info -->
-        <div style="flex:1;min-width:0">
-            <MudText Typo="Typo.body1"
-                     Style="@($"font-weight:600;{(Task.IsCompleted ? "text-decoration:line-through;opacity:.45" : "")}")">
-                @Task.Title
-            </MudText>
-
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1" Wrap="Wrap.Wrap">
-                <!-- Priority chip -->
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Icon="@Task.Priority.ToIcon()"
-                         Color="@Task.Priority.ToColor()"
-                         Variant="Variant.Text"
-                         Style="height:20px;font-size:11px">
-                    @Task.Priority
-                </MudChip>
-
-                @if (Task.DueDate.HasValue)
-                {
-                    var overdue = !Task.IsCompleted && Task.DueDate.Value < DateTime.UtcNow;
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Icon="@Icons.Material.Filled.CalendarToday"
-                             Color="@(overdue ? Color.Error : Color.Default)"
-                             Variant="Variant.Text"
-                             Style="height:20px;font-size:11px">
-                        @Task.DueDate.Value.ToString("MMM d")
-                    </MudChip>
-                }
-            </MudStack>
-
-            @if (!string.IsNullOrEmpty(Task.Description))
+    <div style="flex:1;min-width:0">
+        <MudText Style="@($"font-weight:600;{(Task.IsCompleted ? "text-decoration:line-through;opacity:.5" : "")};overflow:hidden;text-overflow:ellipsis;white-space:nowrap")">
+            @Task.Title
+        </MudText>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px">
+            <div style="display:flex;align-items:center;gap:3px;font-size:11px;opacity:.5">
+                <MudIcon Icon="@Task.Priority.ToIcon()" Style="font-size:13px" Color="@Task.Priority.ToColor()" />
+                @Task.Priority
+            </div>
+            @if (Task.DueDate.HasValue)
             {
-                <MudText Typo="Typo.caption"
-                         Style="opacity:.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical"
-                         Class="mt-1">
-                    @Task.Description
-                </MudText>
+                var overdue = !Task.IsCompleted && Task.DueDate.Value < DateTime.UtcNow;
+                <div style="@($"display:flex;align-items:center;gap:3px;font-size:11px;color:{( overdue ? "#EF4444" : "#64748B")}")">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Style="font-size:12px" />
+                    @Task.DueDate.Value.ToString("MMM d")
+                </div>
             }
         </div>
+        @if (!string.IsNullOrEmpty(Task.Description))
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-top:2px">
+                @Task.Description
+            </MudText>
+        }
+    </div>
 
-        <!-- Action menu -->
-        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                 Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <MudMenuItem Icon="@Icons.Material.Filled.Edit"
-                         OnClick="@(() => OnEdit.InvokeAsync())">Edit</MudMenuItem>
-            <MudMenuItem Icon="@Icons.Material.Filled.Delete"
-                         IconColor="Color.Error"
-                         OnClick="@(() => OnDelete.InvokeAsync())">Delete</MudMenuItem>
-        </MudMenu>
-
-    </MudStack>
-</MudPaper>
+    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OnEdit.InvokeAsync())">Edit</MudMenuItem>
+        <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                     OnClick="@(() => OnDelete.InvokeAsync())">Delete</MudMenuItem>
+    </MudMenu>
+</div>
 
 @code {
     [Parameter, EditorRequired] public TodoTaskResponse Task     { get; set; } = default!;
     [Parameter] public EventCallback OnComplete { get; set; }
     [Parameter] public EventCallback OnEdit     { get; set; }
     [Parameter] public EventCallback OnDelete   { get; set; }
-
-    private string _cardStyle =>
-        Task.IsCompleted
-            ? "opacity:.65;transition:opacity .2s"
-            : "transition:opacity .2s";
 }

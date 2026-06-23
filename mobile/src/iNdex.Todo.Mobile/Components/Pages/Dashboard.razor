@@ -1,0 +1,192 @@
+@page "/"
+@inject AppState AppState
+@inject ITodoListApi ListApi
+@inject ITicketApi TicketApi
+@inject ITimeLogApi TimeLogApi
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Dashboard – iNdex Todo</PageTitle>
+
+@if (!AppState.IsAuthenticated)
+{
+    <!-- Landing hero -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:0 24px">
+        <img src="logo.png" alt="iNdex Todo" style="width:88px;height:88px;object-fit:contain;border-radius:22px;margin-bottom:24px;box-shadow:0 0 48px rgba(0,174,239,.3)" />
+        <MudText Typo="Typo.h3" Style="font-weight:900;color:#00AEEF;letter-spacing:-1px">iNdex</MudText>
+        <MudText Typo="Typo.h3" Style="font-weight:900;color:#F5A623;letter-spacing:-1px;margin-top:-6px">Todo</MudText>
+        <MudText Typo="Typo.body1" Style="opacity:.5;margin-top:12px;margin-bottom:36px;max-width:280px;line-height:1.6">
+            Tasks, tickets and time tracking — all in one place.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                   Class="rounded-xl" Style="min-width:200px;font-weight:700"
+                   Href="/register">Get Started</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Default" Class="mt-3"
+                   Href="/login" Style="opacity:.6">Sign in</MudButton>
+    </div>
+    return;
+}
+
+<!-- Greeting -->
+<div style="margin-bottom:24px">
+    <MudText Typo="Typo.h5" Style="font-weight:800">
+        @_greeting,&nbsp;<span style="color:#00AEEF">@AppState.CurrentUser!.FirstName</span>
+    </MudText>
+    <MudText Typo="Typo.caption" Style="opacity:.4">@DateTime.Now.ToString("dddd, MMMM d")</MudText>
+</div>
+
+<!-- Stats grid -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+    <div class="card card-glow-blue" style="cursor:pointer" @onclick='() => Nav.NavigateTo("/lists")'>
+        <MudText Style="font-size:2rem;font-weight:900;color:#00AEEF;line-height:1">@_lists.Count</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.5;margin-top:4px">Todo Lists</MudText>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;opacity:.4">
+            <MudIcon Icon="@Icons.Material.Filled.Task" Style="font-size:13px" />
+            <span>@_totalTasks tasks</span>
+        </div>
+    </div>
+    <div class="card card-glow-orange" style="cursor:pointer" @onclick='() => Nav.NavigateTo("/tickets")'>
+        <MudText Style="font-size:2rem;font-weight:900;color:#F5A623;line-height:1">@_openTickets</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.5;margin-top:4px">Open Tickets</MudText>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;opacity:.4">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="font-size:13px" />
+            <span>@_doneTickets done</span>
+        </div>
+    </div>
+    <div class="card" style="cursor:pointer" @onclick='() => Nav.NavigateTo("/timelog")'>
+        <MudText Style="font-size:2rem;font-weight:900;color:#39D353;line-height:1">@_todayHours.ToString("0.#")</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.5;margin-top:4px">Hours Today</MudText>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;opacity:.4">
+            <MudIcon Icon="@Icons.Material.Filled.Timer" Style="font-size:13px" />
+            <span>@_weekHours.ToString("0.#") h this week</span>
+        </div>
+    </div>
+    <div class="card">
+        <MudText Style="font-size:2rem;font-weight:900;color:#8B5CF6;line-height:1">@_myTickets</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.5;margin-top:4px">Assigned to me</MudText>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;opacity:.4">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:13px" />
+            <span>@_inProgressTickets in progress</span>
+        </div>
+    </div>
+</div>
+
+<!-- My tickets -->
+@if (_assignedTickets.Count > 0)
+{
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <MudText Style="font-weight:700">My Tickets</MudText>
+        <button @onclick='() => Nav.NavigateTo("/tickets")'
+                style="background:none;border:none;color:#00AEEF;font-size:12px;font-weight:600;cursor:pointer">
+            See all →
+        </button>
+    </div>
+    <MudStack Spacing="2" Class="mb-6">
+        @foreach (var t in _assignedTickets.Take(3))
+        {
+            <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer"
+                 @onclick='() => Nav.NavigateTo($"/tickets/{t.Id}")'>
+                <div style="@($"width:8px;height:48px;border-radius:4px;flex-shrink:0;background:{GetStatusColor(t.Status)}")"></div>
+                <div style="flex:1;min-width:0">
+                    <span class="ticket-num">@t.TicketNumber</span>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">
+                        @t.Title
+                    </MudText>
+                </div>
+                <span class="status-pill @GetPillClass(t.Status)" style="flex-shrink:0">@t.Status</span>
+            </div>
+        }
+    </MudStack>
+}
+
+<!-- Recent lists -->
+@if (_lists.Count > 0)
+{
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <MudText Style="font-weight:700">Recent Lists</MudText>
+        <button @onclick='() => Nav.NavigateTo("/lists")'
+                style="background:none;border:none;color:#00AEEF;font-size:12px;font-weight:600;cursor:pointer">
+            See all →
+        </button>
+    </div>
+    <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none">
+        @foreach (var list in _lists.Take(5))
+        {
+            var accent = list.Color ?? "#00AEEF";
+            <div class="card" style="@($"min-width:160px;border-left:3px solid {accent};cursor:pointer;flex-shrink:0")"
+                 @onclick='() => Nav.NavigateTo($"/lists/{list.Id}")'>
+                <div style="@($"font-size:1.4rem;margin-bottom:8px")")">@(list.Icon ?? "📋")</div>
+                <MudText Style="font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                    @list.Name
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.4;margin-top:4px">
+                    @list.TaskCount @(list.TaskCount == 1 ? "task" : "tasks")
+                </MudText>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<TodoListResponse> _lists = [];
+    private List<TicketResponse> _allTickets = [];
+    private List<TimeLogResponse> _myLogs = [];
+    private bool _loading = true;
+
+    private List<TicketResponse> _assignedTickets =>
+        _allTickets.Where(t => t.AssignedToUserId == AppState.CurrentUser?.Id
+                            && t.Status != "Done" && t.Status != "Cancelled").ToList();
+
+    private int _openTickets      => _allTickets.Count(t => t.Status is "Open" or "InProgress" or "InReview");
+    private int _doneTickets      => _allTickets.Count(t => t.Status == "Done");
+    private int _myTickets        => _assignedTickets.Count;
+    private int _inProgressTickets => _assignedTickets.Count(t => t.Status == "InProgress");
+    private int _totalTasks       => _lists.Sum(l => l.TaskCount);
+    private decimal _todayHours   => _myLogs.Where(l => l.LoggedDate.Date == DateTime.UtcNow.Date).Sum(l => l.Hours);
+    private decimal _weekHours    => _myLogs.Where(l => l.LoggedDate >= DateTime.UtcNow.AddDays(-7)).Sum(l => l.Hours);
+
+    private string _greeting => DateTime.Now.Hour switch { < 12 => "Morning", < 17 => "Afternoon", _ => "Evening" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += OnStateChanged;
+        if (AppState.IsAuthenticated) await LoadAsync();
+    }
+
+    private async void OnStateChanged()
+    {
+        if (AppState.IsAuthenticated && !_loading) await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var t1 = ListApi.GetAllTodoListsAsync(AppState.CurrentUser!.Id);
+            var t2 = TicketApi.GetAllTicketsAsync();
+            var t3 = TimeLogApi.GetTimeLogsByUserAsync(AppState.CurrentUser.Id);
+            await Task.WhenAll(t1, t2, t3);
+
+            var lr = await t1; if (lr.IsSuccessStatusCode) _lists       = lr.Content ?? [];
+            var tr = await t2; if (tr.IsSuccessStatusCode) _allTickets  = tr.Content ?? [];
+            var mr = await t3; if (mr.IsSuccessStatusCode) _myLogs      = mr.Content ?? [];
+        }
+        finally { _loading = false; }
+    }
+
+    private string GetStatusColor(string s) => s switch
+    {
+        "InProgress" => "#00AEEF", "InReview" => "#F5A623",
+        "Done"       => "#39D353", "Cancelled" => "#EF4444", _ => "#64748B"
+    };
+
+    private string GetPillClass(string s) => s switch
+    {
+        "InProgress" => "pill-inprogress", "InReview" => "pill-inreview",
+        "Done"       => "pill-done",       "Cancelled" => "pill-cancelled", _ => "pill-open"
+    };
+
+    public void Dispose() => AppState.OnChange -= OnStateChanged;
+}

@@ -1,8 +1,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 
-<MudThemeProvider @bind-IsDarkMode="@_isDark" Theme="_theme" />
-<MudPopoverProvider />
-<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
+<MudThemeProvider IsDarkMode="true" />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" CloseButton="true" />
 <MudSnackbarProvider />
 
 <Router AppAssembly="@typeof(App).Assembly">
@@ -11,60 +10,11 @@
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>404 – iNdex Todo</PageTitle>
-        <MudContainer Class="d-flex flex-column align-center justify-center" Style="height:100vh">
-            <MudText Typo="Typo.h3" Color="Color.Primary">404</MudText>
-            <MudText Typo="Typo.body1" Class="mt-2 mb-4">Page not found.</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Go Home</MudButton>
-        </MudContainer>
+        <PageTitle>Not found</PageTitle>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;text-align:center;padding:24px">
+            <MudText Typo="Typo.h2" Style="color:#00AEEF;font-weight:900">404</MudText>
+            <MudText Style="opacity:.4;margin:8px 0 24px">Page not found</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" Class="rounded-xl">Go Home</MudButton>
+        </div>
     </NotFound>
 </Router>
-
-@code {
-    [Inject] AppState AppState { get; set; } = default!;
-
-    private bool _isDark = true;
-
-    private readonly MudTheme _theme = new()
-    {
-        PaletteLight = new PaletteLight
-        {
-            Primary        = "#00AEEF",
-            Secondary      = "#39D353",
-            Tertiary       = "#F5A623",
-            Background     = "#F8FAFC",
-            AppbarBackground = "#FFFFFF",
-            DrawerBackground = "#FFFFFF",
-            Surface        = "#FFFFFF",
-            TextPrimary    = "#0F172A",
-        },
-        PaletteDark = new PaletteDark
-        {
-            Primary        = "#00AEEF",
-            Secondary      = "#39D353",
-            Tertiary       = "#F5A623",
-            Background     = "#0F172A",
-            AppbarBackground = "#0A0F1E",
-            DrawerBackground = "#0A0F1E",
-            Surface        = "#1E293B",
-            TextPrimary    = "#F1F5F9",
-            TextSecondary  = "#94A3B8",
-        },
-        Typography = new Typography
-        {
-            Default = new DefaultTypography { FontFamily = ["Inter", "system-ui", "sans-serif"] },
-            H5      = new H5Typography      { FontWeight = "700" },
-            H6      = new H6Typography      { FontWeight = "600" },
-        },
-        LayoutProperties = new LayoutProperties
-        {
-            DefaultBorderRadius = "12px",
-        }
-    };
-
-    protected override void OnInitialized()
-    {
-        _isDark = AppState.IsDarkMode;
-        AppState.OnChange += () => { _isDark = AppState.IsDarkMode; InvokeAsync(StateHasChanged); };
-    }
-}

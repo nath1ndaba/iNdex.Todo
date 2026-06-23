@@ -3,52 +3,42 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0F172A" />
+    <meta name="theme-color" content="#070B14" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>iNdex Todo</title>
-
-    <!-- MudBlazor -->
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-
-    <!-- App styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
     <div id="app">
-        <!-- Splash shown while Blazor loads -->
         <div id="splash">
-            <div class="splash-inner">
-                <div class="splash-ring"></div>
-                <div class="splash-logo">
-                    <span style="color:#00AEEF;font-weight:900;font-size:2rem">iNdex</span>
-                    <span style="color:#F5A623;font-weight:900;font-size:2rem"> Todo</span>
+            <div class="splash-logo-wrap">
+                <img src="logo.png" alt="iNdex Todo"
+                     style="width:80px;height:80px;object-fit:contain;border-radius:20px;box-shadow:0 0 40px rgba(0,174,239,.4);margin-bottom:8px"
+                     onerror="this.style.display='none'" />
+                <div>
+                    <span style="font-weight:900;font-size:2rem;color:#00AEEF">iNdex</span>
+                    <span style="font-weight:900;font-size:2rem;color:#F5A623"> Todo</span>
                 </div>
-                <p style="color:#94A3B8;font-size:.85rem;margin-top:1rem">Loading…</p>
+                <div class="splash-ring" style="margin-top:24px"></div>
             </div>
         </div>
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+        An error occurred. <a href="" class="reload">Reload</a>
     </div>
 
-    <!-- MudBlazor JS -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-
-    <!-- Blazor WebView framework -->
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script>
-        // Remove splash once Blazor is ready
         Blazor.start().then(() => {
-            const splash = document.getElementById('splash');
-            if (splash) splash.style.opacity = '0';
-            setTimeout(() => splash?.remove(), 400);
+            const s = document.getElementById('splash');
+            if (s) { s.style.opacity = '0'; s.style.transform = 'scale(1.02)'; setTimeout(() => s?.remove(), 500); }
         });
     </script>
 </body>

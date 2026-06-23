@@ -102,3 +102,63 @@ public static class PriorityExtensions
         _          => MudBlazor.Color.Default
     };
 }
+
+// Tickets
+public record CreateTicketRequest(
+    string Title, string? Description, int Priority, int Type,
+    DateTime? DueDate, DateTime? StartDate, int EstimatedHours,
+    Guid CreatedByUserId, Guid? AssignedToUserId);
+
+public record UpdateTicketRequest(
+    string Title, string? Description, int Priority, int Type, int Status,
+    DateTime? DueDate, DateTime? StartDate, int EstimatedHours, Guid? AssignedToUserId);
+
+public record LogTimeRequest(
+    Guid TicketId, Guid UserId, decimal Hours, string Description, DateTime? LoggedDate);
+
+public record TicketResponse(
+    Guid Id, string TicketNumber, string Title, string? Description,
+    string Status, string Priority, string Type,
+    DateTime? DueDate, DateTime? StartDate,
+    int EstimatedHours, decimal TotalLoggedHours,
+    Guid CreatedByUserId, string CreatedByName,
+    Guid? AssignedToUserId, string? AssignedToName,
+    int CommentCount, DateTime CreatedAt);
+
+public record TimeLogResponse(
+    Guid Id, Guid TicketId, string TicketNumber,
+    Guid UserId, string UserName,
+    decimal Hours, string Description, DateTime LoggedDate);
+
+public record TimeLogSummaryResponse(
+    Guid TicketId, string TicketNumber, string TicketTitle,
+    decimal TotalHours, int EstimatedHours, decimal RemainingHours,
+    List<TimeLogResponse> Logs);
+
+public static class TicketExtensions
+{
+    public static string StatusIcon(this string status) => status switch
+    {
+        "InProgress" => Icons.Material.Filled.PlayCircle,
+        "InReview"   => Icons.Material.Filled.RateReview,
+        "Done"       => Icons.Material.Filled.CheckCircle,
+        "Cancelled"  => Icons.Material.Filled.Cancel,
+        _            => Icons.Material.Filled.RadioButtonUnchecked
+    };
+    public static MudBlazor.Color StatusColor(this string status) => status switch
+    {
+        "InProgress" => MudBlazor.Color.Info,
+        "InReview"   => MudBlazor.Color.Warning,
+        "Done"       => MudBlazor.Color.Success,
+        "Cancelled"  => MudBlazor.Color.Error,
+        _            => MudBlazor.Color.Default
+    };
+    public static string TypeIcon(this string type) => type switch
+    {
+        "Bug"         => Icons.Material.Filled.BugReport,
+        "Feature"     => Icons.Material.Filled.NewReleases,
+        "Improvement" => Icons.Material.Filled.TrendingUp,
+        "Research"    => Icons.Material.Filled.Science,
+        _             => Icons.Material.Filled.Task
+    };
+}

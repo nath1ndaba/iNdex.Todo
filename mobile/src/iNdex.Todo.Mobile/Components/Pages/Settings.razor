@@ -1,0 +1,77 @@
+@page "/settings"
+@inject AppState AppState
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Settings – iNdex Todo</PageTitle>
+
+<MudText Typo="Typo.h5" Style="font-weight:800;margin-bottom:20px">Settings</MudText>
+
+@if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+
+<!-- Profile card -->
+<div class="card card-glow-blue" style="margin-bottom:16px;display:flex;align-items:center;gap:16px">
+    <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#0050A0,#00AEEF);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:white;flex-shrink:0">
+        @AppState.CurrentUser!.FirstName[0]@AppState.CurrentUser.LastName[0]
+    </div>
+    <div>
+        <MudText Style="font-weight:700;font-size:1rem">
+            @AppState.CurrentUser.FirstName @AppState.CurrentUser.LastName
+        </MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.5">@AppState.CurrentUser.Email</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.3;margin-top:2px">
+            Member since @AppState.CurrentUser.CreatedAt.ToString("MMMM yyyy")
+        </MudText>
+    </div>
+</div>
+
+<!-- Appearance -->
+<div class="card" style="margin-bottom:12px">
+    <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:12px">
+        Appearance
+    </MudText>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+            <MudIcon Icon="@(AppState.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+                     Color="Color.Primary" />
+            <MudText>Dark Mode</MudText>
+        </div>
+        <MudSwitch T="bool" Value="@AppState.IsDarkMode"
+                   ValueChanged="@(_ => AppState.ToggleTheme())"
+                   Color="Color.Primary" />
+    </div>
+</div>
+
+<!-- App info -->
+<div class="card" style="margin-bottom:20px">
+    <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:12px">
+        About
+    </MudText>
+    @foreach (var (label, value) in new[] {
+        ("App", "iNdex Todo"),
+        ("Version", "1.0.0"),
+        ("Platform", ".NET MAUI Blazor Hybrid"),
+        ("UI", "MudBlazor 8"),
+        ("API Client", "Refit 8"),
+        ("Real-time", "ASP.NET SignalR")
+    })
+    {
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+            <MudText Typo="Typo.body2" Style="opacity:.45">@label</MudText>
+            <MudText Typo="Typo.body2" Style="font-weight:600">@value</MudText>
+        </div>
+    }
+</div>
+
+<!-- Sign out -->
+<button @onclick="SignOut"
+        style="width:100%;padding:14px;border-radius:12px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#EF4444;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s">
+    <MudIcon Icon="@Icons.Material.Filled.Logout" Style="font-size:18px" />
+    Sign Out
+</button>
+
+@code {
+    private void SignOut() { AppState.ClearSession(); Nav.NavigateTo("/login"); }
+    protected override void OnInitialized() => AppState.OnChange += StateHasChanged;
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

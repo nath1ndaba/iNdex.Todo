@@ -1,3 +1,4 @@
+using Humanizer;
 using iNdex.Todo.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,7 +29,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            // TABLES
+            entity.SetTableName(
+                entity.ClrType.Name.Underscore().Pluralize().ToLower()
+            );
+
+            // COLUMNS (THIS FIXES YOUR ERROR)
+            foreach (var property in entity.GetProperties())
+            {
+                property.SetColumnName(
+                    property.Name.Underscore().ToLower()
+                );
+            }
+        }
     }
 }
