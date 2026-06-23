@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
 
     <!-- App Info -->
-    <ApplicationTitle>iNdex Todo</ApplicationTitle>
+    <ApplicationTitle>Task Me</ApplicationTitle>
     <ApplicationId>com.index.todo</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
