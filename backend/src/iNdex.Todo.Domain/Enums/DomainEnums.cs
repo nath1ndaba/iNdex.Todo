@@ -24,6 +24,24 @@ public enum NotificationType
     InApp = 2
 }
 
+public enum TicketStatus
+{
+    Open = 0,
+    InProgress = 1,
+    InReview = 2,
+    Done = 3,
+    Cancelled = 4
+}
+
+public enum TicketType
+{
+    Task = 0,
+    Bug = 1,
+    Feature = 2,
+    Improvement = 3,
+    Research = 4
+}
+
 public enum SyncOperation
 {
     Create = 0,

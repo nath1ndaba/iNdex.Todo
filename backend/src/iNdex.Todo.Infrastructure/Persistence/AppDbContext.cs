@@ -1,6 +1,4 @@
-using Humanizer;
 using iNdex.Todo.Domain.Entities;
-using iNdex.Todo.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace iNdex.Todo.Infrastructure.Persistence;
@@ -23,27 +21,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TimeLog> TimeLogs => Set<TimeLog>();
+    public DbSet<TicketComment> TicketComments => Set<TicketComment>();
+    public DbSet<TicketAttachment> TicketAttachments => Set<TicketAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-
-        foreach (var entity in modelBuilder.Model.GetEntityTypes())
-        {
-            // TABLES
-            entity.SetTableName(
-                entity.ClrType.Name.Underscore().Pluralize().ToLower()
-            );
-
-            // COLUMNS (THIS FIXES YOUR ERROR)
-            foreach (var property in entity.GetProperties())
-            {
-                property.SetColumnName(
-                    property.Name.Underscore().ToLower()
-                );
-            }
-        }
+        base.OnModelCreating(modelBuilder);
     }
 }

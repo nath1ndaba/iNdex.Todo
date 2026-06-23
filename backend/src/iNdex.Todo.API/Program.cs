@@ -111,6 +111,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapTodoListEndpoints();
 app.MapTodoTaskEndpoints();
+app.MapTicketEndpoints();
 
 // ── SignalR ───────────────────────────────────────────────────────────────────
 app.MapHub<TodoHub>("/hubs/todo");

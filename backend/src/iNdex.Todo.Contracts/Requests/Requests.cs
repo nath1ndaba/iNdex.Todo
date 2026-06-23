@@ -49,3 +49,33 @@ public sealed record UpdateTodoTaskRequest(
 
 public sealed record CompleteTaskRequest(
     bool IsCompleted);
+
+// Tickets
+public sealed record CreateTicketRequest(
+    string Title,
+    string? Description,
+    int Priority,
+    int Type,
+    DateTime? DueDate,
+    DateTime? StartDate,
+    int EstimatedHours,
+    Guid CreatedByUserId,
+    Guid? AssignedToUserId);
+
+public sealed record UpdateTicketRequest(
+    string Title,
+    string? Description,
+    int Priority,
+    int Type,
+    int Status,
+    DateTime? DueDate,
+    DateTime? StartDate,
+    int EstimatedHours,
+    Guid? AssignedToUserId);
+
+public sealed record LogTimeRequest(
+    Guid TicketId,
+    Guid UserId,
+    decimal Hours,
+    string Description,
+    DateTime? LoggedDate);

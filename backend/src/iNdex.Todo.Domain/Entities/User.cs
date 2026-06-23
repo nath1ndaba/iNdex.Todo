@@ -18,4 +18,7 @@ public sealed class User : BaseEntity
     public ICollection<Device> Devices { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
+    public ICollection<Ticket> CreatedTickets  { get; set; } = [];
+    public ICollection<Ticket> AssignedTickets { get; set; } = [];
+    public ICollection<TimeLog> TimeLogs       { get; set; } = [];
 }

@@ -34,6 +34,8 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<ITodoListRepository, TodoListRepository>();
         services.AddScoped<ITodoTaskRepository, TodoTaskRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<ITimeLogRepository, TimeLogRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Auth services

@@ -38,3 +38,41 @@ public sealed record AuthResponse(
     string RefreshToken,
     DateTime ExpiresAt,
     UserResponse User);
+
+public sealed record TicketResponse(
+    Guid Id,
+    string TicketNumber,
+    string Title,
+    string? Description,
+    string Status,
+    string Priority,
+    string Type,
+    DateTime? DueDate,
+    DateTime? StartDate,
+    int EstimatedHours,
+    decimal TotalLoggedHours,
+    Guid CreatedByUserId,
+    string CreatedByName,
+    Guid? AssignedToUserId,
+    string? AssignedToName,
+    int CommentCount,
+    DateTime CreatedAt);
+
+public sealed record TimeLogResponse(
+    Guid Id,
+    Guid TicketId,
+    string TicketNumber,
+    Guid UserId,
+    string UserName,
+    decimal Hours,
+    string Description,
+    DateTime LoggedDate);
+
+public sealed record TimeLogSummaryResponse(
+    Guid TicketId,
+    string TicketNumber,
+    string TicketTitle,
+    decimal TotalHours,
+    int EstimatedHours,
+    decimal RemainingHours,
+    List<TimeLogResponse> Logs);
