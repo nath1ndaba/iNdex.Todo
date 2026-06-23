@@ -10,11 +10,6 @@
               Class="d-flex flex-column align-center justify-center"
               Style="min-height:80vh">
 
-    <MudStack AlignItems="AlignItems.Center" Spacing="0" Class="mb-6">
-        <MudText Typo="Typo.h3" Style="font-weight:900;color:#00AEEF;letter-spacing:-1px">iNdex</MudText>
-        <MudText Typo="Typo.h4" Style="font-weight:900;color:#F5A623;margin-top:-4px">Todo</MudText>
-    </MudStack>
-
     <MudPaper Elevation="4" Class="pa-6 rounded-xl" Style="width:100%">
         <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700">Create your account</MudText>
 
@@ -59,7 +54,10 @@
                    OnClick="RegisterAsync"
                    Disabled="_loading"
                    Class="rounded-xl">
-            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
             Create Account
         </MudButton>
 
@@ -74,16 +72,16 @@
 
 @code {
     private string _firstName = string.Empty;
-    private string _lastName  = string.Empty;
-    private string _email     = string.Empty;
-    private string _password  = string.Empty;
-    private bool   _showPwd;
-    private bool   _loading;
+    private string _lastName = string.Empty;
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private bool _showPwd;
+    private bool _loading;
 
     private async Task RegisterAsync()
     {
         if (string.IsNullOrWhiteSpace(_firstName) ||
-            string.IsNullOrWhiteSpace(_email)     ||
+            string.IsNullOrWhiteSpace(_email) ||
             string.IsNullOrWhiteSpace(_password))
         {
             Snackbar.Add("Please fill in all required fields.", Severity.Warning);
