@@ -20,7 +20,7 @@ public sealed class RefreshTokenHandler(
     {
         var existing = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
 
-        if (existing is null || !existing.IsActive)
+        if (existing is null || !existing.IsTokenActive)
             return Result.Failure<AuthResponse>(
                 Error.Validation("Auth.InvalidRefreshToken", "Refresh token is invalid or expired."));
 
@@ -31,15 +31,15 @@ public sealed class RefreshTokenHandler(
         // Rotate the refresh token
         var newRefresh = new Domain.Entities.RefreshToken
         {
-            UserId    = user.Id,
-            Token     = jwtService.GenerateRefreshToken(),
+            UserId = user.Id,
+            Token = jwtService.GenerateRefreshToken(),
             ExpiresAt = jwtService.RefreshTokenExpiry,
             CreatedBy = user.Id.ToString()
         };
 
-        existing.IsRevoked       = true;
+        existing.IsRevoked = true;
         existing.ReplacedByToken = newRefresh.Token;
-        existing.RevokedReason   = "Rotated";
+        existing.RevokedReason = "Rotated";
 
         await refreshTokenRepository.UpdateAsync(existing, cancellationToken);
         await refreshTokenRepository.AddAsync(newRefresh, cancellationToken);
@@ -65,11 +65,11 @@ public sealed class RevokeTokenHandler(
     {
         var token = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
 
-        if (token is null || !token.IsActive)
+        if (token is null || !token.IsTokenActive)
             return Result.Failure<bool>(
                 Error.Validation("Auth.InvalidRefreshToken", "Token not found or already revoked."));
 
-        token.IsRevoked     = true;
+        token.IsRevoked = true;
         token.RevokedReason = "Revoked by user";
 
         await refreshTokenRepository.UpdateAsync(token, cancellationToken);

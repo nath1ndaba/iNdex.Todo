@@ -3,9 +3,9 @@ using iNdex.Todo.AI.Services;
 using iNdex.Todo.Application.Common.Interfaces;
 using iNdex.Todo.Application.Common.Result;
 using iNdex.Todo.Contracts.AI;
-using iNdex.Todo.Domain.Errors;
 using iNdex.Todo.Domain.Entities;
-using System.Text.Json;
+using iNdex.Todo.Domain.Enums;
+using iNdex.Todo.Domain.Errors;
 
 namespace iNdex.Todo.Application.Features.AI;
 
@@ -45,9 +45,9 @@ public sealed class SuggestAssigneeHandler(
         var suggestions = new List<AssigneeSuggestion>();
         foreach (var user in users.Where(u => u.IsActive && !u.IsDeleted))
         {
-            var skills      = user.SkillProfile ?? string.Empty;
-            var workload    = (await ticketRepo.GetByAssignedUserAsync(user.Id, ct))
-                                .Count(t => t.Status is "Open" or "InProgress");
+            var skills = user.SkillProfile ?? string.Empty;
+            var workload = (await ticketRepo.GetByAssignedUserAsync(user.Id, ct))
+                                .Count(t => t.Status is TicketStatus.Open or TicketStatus.InProgress);
             var successRate = user.PerformanceRating.HasValue
                 ? user.PerformanceRating.Value / 5f
                 : 0.7f;
@@ -134,13 +134,13 @@ public sealed class PredictDeadlineRiskHandler(
             ? (float)(ticket.DueDate.Value - DateTime.UtcNow).TotalDays
             : 999f;
 
-        var logged   = ticket.TimeLogs.Sum(l => l.Hours);
+        var logged = ticket.TimeLogs.Sum(l => l.Hours);
         var progress = ticket.EstimatedHours > 0
             ? Math.Min(1f, (float)logged / ticket.EstimatedHours)
             : 0.5f;
 
         var workload = 0f;
-        var onTime   = 0.75f;
+        var onTime = 0.75f;
 
         if (ticket.AssignedToUserId.HasValue)
         {
@@ -157,9 +157,9 @@ public sealed class PredictDeadlineRiskHandler(
 
         var explanation = risk switch
         {
-            "High"   => $"Only {daysLeft:F0} days left with {progress:P0} progress and high assignee workload.",
+            "High" => $"Only {daysLeft:F0} days left with {progress:P0} progress and high assignee workload.",
             "Medium" => $"Moderate risk — {daysLeft:F0} days remaining, {progress:P0} complete.",
-            _        => $"On track — {daysLeft:F0} days remaining, {progress:P0} complete."
+            _ => $"On track — {daysLeft:F0} days remaining, {progress:P0} complete."
         };
 
         // Persist risk back to ticket
@@ -187,10 +187,10 @@ public sealed class SummarizeTicketHandler(
                 Error.NotFound(nameof(Ticket), r.TicketId));
 
         var comments = ticket.Comments.Select(c => c.Comment);
-        var summary  = await gemini.SummarizeTicketAsync(
+        var summary = await gemini.SummarizeTicketAsync(
             ticket.Title, ticket.Description ?? string.Empty, comments, ct);
 
-        ticket.AiSummary            = summary;
+        ticket.AiSummary = summary;
         ticket.AiSummaryGeneratedAt = DateTime.UtcNow;
         await ticketRepo.UpdateAsync(ticket, ct);
         await uow.SaveChangesAsync(ct);
@@ -212,8 +212,8 @@ public sealed class NaturalLanguageTicketHandler(
     public async Task<Result<NlTicketResponse>> HandleAsync(
         NaturalLanguageTicketRequest r, CancellationToken ct = default)
     {
-        var users   = await userRepo.GetAllAsync(ct);
-        var names   = users.Select(u => $"{u.FirstName} {u.LastName}");
+        var users = await userRepo.GetAllAsync(ct);
+        var names = users.Select(u => $"{u.FirstName} {u.LastName}");
         var nlResult = await gemini.CreateTicketFromNaturalLanguageAsync(r.Instruction, names, ct);
 
         // Try to resolve assignee name to a user ID
@@ -230,14 +230,14 @@ public sealed class NaturalLanguageTicketHandler(
         var number = await ticketRepo.GenerateTicketNumberAsync(ct);
         var ticket = new Ticket
         {
-            Title            = nlResult.Title,
-            Description      = nlResult.Description,
-            TicketNumber     = number,
-            AiCategory       = nlResult.Category,
+            Title = nlResult.Title,
+            Description = nlResult.Description,
+            TicketNumber = number,
+            AiCategory = nlResult.Category,
             AssignedToUserId = assigneeId,
-            CreatedByUserId  = r.CreatedByUserId,
-            CreatedBy        = r.CreatedByUserId.ToString(),
-            DueDate          = DateTime.TryParse(nlResult.DueDate, out var d)
+            CreatedByUserId = r.CreatedByUserId,
+            CreatedBy = r.CreatedByUserId.ToString(),
+            DueDate = DateTime.TryParse(nlResult.DueDate, out var d)
                                ? d.ToUniversalTime()
                                : null,
         };
@@ -278,15 +278,15 @@ public sealed class ExecutiveSummaryHandler(
     public async Task<Result<ExecutiveSummaryResponse>> HandleAsync(
         GenerateExecutiveSummaryRequest r, CancellationToken ct = default)
     {
-        var allTickets  = await ticketRepo.GetAllWithDetailsAsync(ct);
-        var open        = allTickets.Count(t => t.Status is not (Domain.Enums.TicketStatus.Done or Domain.Enums.TicketStatus.Cancelled));
-        var critical    = allTickets.Count(t => t.Priority == Domain.Enums.TaskPriority.Critical &&
+        var allTickets = await ticketRepo.GetAllWithDetailsAsync(ct);
+        var open = allTickets.Count(t => t.Status is not (Domain.Enums.TicketStatus.Done or Domain.Enums.TicketStatus.Cancelled));
+        var critical = allTickets.Count(t => t.Priority == Domain.Enums.TaskPriority.Critical &&
                                                 t.Status != Domain.Enums.TicketStatus.Done);
-        var weekStart   = DateTime.UtcNow.AddDays(-7);
+        var weekStart = DateTime.UtcNow.AddDays(-7);
         var completedWk = allTickets.Count(t => t.UpdatedAt >= weekStart &&
                                                 t.Status == Domain.Enums.TicketStatus.Done);
 
-        var risks   = allTickets
+        var risks = allTickets
             .Where(t => t.AiDeadlineRisk == "High" && t.Status != Domain.Enums.TicketStatus.Done)
             .Take(5)
             .Select(t => $"{t.TicketNumber}: {t.Title}")
@@ -317,13 +317,13 @@ public sealed class ReleaseReadinessHandler(
     public async Task<Result<ReleaseReadinessResponse>> HandleAsync(
         ReleaseReadinessRequest r, CancellationToken ct = default)
     {
-        var all        = await ticketRepo.GetAllWithDetailsAsync(ct);
-        var bugs       = all.Count(t => t.Type == Domain.Enums.TicketType.Bug &&
+        var all = await ticketRepo.GetAllWithDetailsAsync(ct);
+        var bugs = all.Count(t => t.Type == Domain.Enums.TicketType.Bug &&
                                         t.Status != Domain.Enums.TicketStatus.Done);
-        var critical   = all.Count(t => t.Priority == Domain.Enums.TaskPriority.Critical &&
+        var critical = all.Count(t => t.Priority == Domain.Enums.TaskPriority.Critical &&
                                         t.Status != Domain.Enums.TicketStatus.Done);
-        var pending    = all.Count(t => t.Status == Domain.Enums.TicketStatus.InReview);
-        var completed  = all.Count(t => t.Status == Domain.Enums.TicketStatus.Done);
+        var pending = all.Count(t => t.Status == Domain.Enums.TicketStatus.InReview);
+        var completed = all.Count(t => t.Status == Domain.Enums.TicketStatus.Done);
 
         var (score, analysis) = await gemini.AnalyzeReleaseReadinessAsync(
             bugs, critical, pending, all.Count, completed, ct);

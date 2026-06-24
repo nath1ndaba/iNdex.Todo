@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Layer registrations ───────────────────────────────────────────────────────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddAiServices(builder.Configuration);
+//builder.Services.AddAiServices(builder.Configuration);
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration

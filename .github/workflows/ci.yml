@@ -7,14 +7,16 @@ on:
     branches: [main, develop]
 
 jobs:
-  # ── Backend ─────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1. BACKEND — restore, build, test (with real Postgres via service container)
+  # ────────────────────────────────────────────────────────────────────────────
   backend:
     name: Backend (.NET 10)
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
           POSTGRES_USER:     postgres
           POSTGRES_PASSWORD: postgres
@@ -26,64 +28,152 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT:       true
+      ConnectionStrings__DefaultConnection: >-
+        Host=localhost;Port=5432;Database=index_todo_test;
+        Username=postgres;Password=postgres
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
+
+      # Cache NuGet packages — keyed on lock files so it invalidates correctly
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-backend-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: nuget-backend-${{ runner.os }}-
 
       - name: Restore
         run: dotnet restore backend/iNdex.Todo.sln
 
-      - name: Build
+      - name: Build (Release)
         run: dotnet build backend/iNdex.Todo.sln --no-restore -c Release
 
-      - name: Test
-        run: dotnet test backend/iNdex.Todo.sln --no-build -c Release --verbosity normal
-        env:
-          ConnectionStrings__DefaultConnection: >-
-            Host=localhost;Port=5432;Database=index_todo_test;Username=postgres;Password=postgres
+      - name: Apply EF Migrations
+        working-directory: backend
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef database update \
+            -p src/iNdex.Todo.Infrastructure \
+            -s src/iNdex.Todo.API \
+            --no-build \
+            -c Release
 
-  # ── Mobile (Android build check) ────────────────────────────────────────────
+      - name: Run Unit Tests
+        run: |
+          dotnet test backend/iNdex.Todo.sln \
+            --no-build -c Release \
+            --filter "FullyQualifiedName~UnitTests" \
+            --verbosity normal \
+            --results-directory ./test-results \
+            --logger "trx;LogFileName=unit.trx"
+
+      - name: Run Integration Tests
+        run: |
+          dotnet test backend/iNdex.Todo.sln \
+            --no-build -c Release \
+            --filter "FullyQualifiedName~IntegrationTests" \
+            --verbosity normal \
+            --results-directory ./test-results \
+            --logger "trx;LogFileName=integration.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results/*.trx
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. MOBILE — Android build check (no signing, just verify it compiles)
+  # ────────────────────────────────────────────────────────────────────────────
   mobile-android:
-    name: Mobile — Android Build
+    name: Mobile — Android Debug Build
     runs-on: ubuntu-latest
 
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT:       true
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
 
+      # Cache both NuGet packages and MAUI workload packs
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-mobile-${{ runner.os }}-${{ hashFiles('mobile/**/*.csproj') }}
+          restore-keys: nuget-mobile-${{ runner.os }}-
+
+      - name: Cache MAUI workload
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/toolResolverCache
+            /usr/share/dotnet/packs
+            /usr/share/dotnet/sdk-manifests
+          key: maui-workload-${{ runner.os }}-${{ hashFiles('mobile/**/*.csproj') }}
+          restore-keys: maui-workload-${{ runner.os }}-
+
       - name: Install MAUI Android workload
-        run: dotnet workload install maui-android
+        run: dotnet workload install maui-android --skip-sign-check
 
       - name: Restore
         run: dotnet restore mobile/iNdex.Todo.Mobile.sln
 
-      - name: Build
+      - name: Build Android Debug
         run: |
           dotnet build mobile/src/iNdex.Todo.Mobile/iNdex.Todo.Mobile.csproj \
             -f net10.0-android \
             -c Debug \
-            --no-restore
+            --no-restore \
+            -p:AndroidSdkDirectory=$ANDROID_SDK_ROOT
 
-  # ── Docker build check ───────────────────────────────────────────────────────
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug
+          path: mobile/src/iNdex.Todo.Mobile/bin/Debug/net10.0-android/**/*.apk
+          retention-days: 3
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3. DOCKER — verify the API image builds cleanly (runs after backend passes)
+  # ────────────────────────────────────────────────────────────────────────────
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build \
-            -f backend/Dockerfile \
-            -t index-todo-api:ci \
-            ./backend
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file:    ./backend/Dockerfile
+          push:    false
+          tags:    index-todo-api:ci
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max

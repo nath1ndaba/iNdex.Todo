@@ -1,7 +1,6 @@
 using iNdex.Todo.Application.Common.Interfaces;
 using iNdex.Todo.Application.Common.Result;
 using iNdex.Todo.Contracts.Responses;
-using Microsoft.EntityFrameworkCore;
 
 namespace iNdex.Todo.Application.Features.Users.GetAllUsers;
 
