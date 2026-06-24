@@ -162,3 +162,23 @@ public static class TicketExtensions
         _             => Icons.Material.Filled.Task
     };
 }
+
+// ── AI Models ─────────────────────────────────────────────────────────────────
+public record PredictPriorityRequest(string Title, string? Description, string? Category, string? TicketType);
+public record SuggestAssigneeRequest(Guid TicketId, string TicketCategory, string TicketType, string TicketPriority);
+public record PredictCompletionRequest(Guid TicketId, Guid? AssigneeId);
+public record PredictDeadlineRiskRequest(Guid TicketId);
+public record SummarizeTicketRequest(Guid TicketId);
+public record NaturalLanguageTicketRequest(string Instruction, Guid CreatedByUserId);
+public record SuggestCategoryRequest(string Title, string? Description);
+
+public record PriorityPredictionResponse(string SuggestedPriority, float Confidence, string ConfidencePercent);
+public record AssigneeSuggestion(Guid UserId, string Name, float Score, string SkillMatch);
+public record AssigneeSuggestionResponse(List<AssigneeSuggestion> Suggestions);
+public record CompletionPredictionResponse(float EstimatedDays, string EstimatedLabel);
+public record DeadlineRiskResponse(string Risk, float Probability, string Explanation);
+public record TicketSummaryResponse(Guid TicketId, string Summary, DateTime GeneratedAt);
+public record NlTicketResponse(string Title, string? Description, string? AssigneeName, Guid? AssigneeId, string Priority, string Type, string? DueDate, string? Category);
+public record CategorySuggestionResponse(string Category, float Confidence, string ConfidencePercent);
+public record ExecutiveSummaryResponse(DateTime Date, int OpenTickets, int CriticalTickets, int CompletedThisWeek, float ReleaseReadiness, List<string> TopRisks, List<string> RecommendedActions, string Narrative);
+public record ReleaseReadinessResponse(float Score, string Grade, string Analysis, bool ReadyToRelease);

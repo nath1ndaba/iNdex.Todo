@@ -1,0 +1,159 @@
+@page "/ai/create"
+@inject IAiApi AiApi
+@inject ITicketApi TicketApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>AI Ticket Creator – iNdex Todo</PageTitle>
+
+<!-- Header -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+    <button @onclick='() => Nav.NavigateTo("/ai")'
+            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#F1F5F9;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+    </button>
+    <div>
+        <MudText Style="font-weight:800;font-size:1.1rem">AI Ticket Creator</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4">Describe your ticket in plain English</MudText>
+    </div>
+</div>
+
+<!-- Input area -->
+<div class="card card-glow-green" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="color:#39D353;font-size:18px" />
+        <MudText Typo="Typo.caption" Style="color:#39D353;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+            Natural Language
+        </MudText>
+    </div>
+
+    <MudTextField @bind-Value="_instruction"
+                  Variant="Variant.Outlined"
+                  Lines="3"
+                  Placeholder='e.g. "Assign John to fix the Android login crash by Friday with high priority"'
+                  FullWidth="true"
+                  MaxLength="500" />
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        @foreach (var ex in _examples)
+        {
+            <button @onclick="() => _instruction = ex"
+                    style="padding:5px 12px;border-radius:99px;border:1px solid rgba(57,211,83,.25);background:rgba(57,211,83,.08);color:#39D353;font-size:11px;cursor:pointer;transition:all .15s">
+                @ex
+            </button>
+        }
+    </div>
+
+    <button @onclick="ParseInstruction"
+            disabled="@(string.IsNullOrWhiteSpace(_instruction) || _parsing)"
+            style="@($"width:100%;margin-top:14px;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A6B30,#39D353);color:white;font-size:14px;font-weight:700;cursor:{( string.IsNullOrWhiteSpace(_instruction) || _parsing ? "not-allowed" : "pointer")};opacity:{( string.IsNullOrWhiteSpace(_instruction) || _parsing ? ".5" : "1")};display:flex;align-items:center;justify-content:center;gap:8px")">
+        @if (_parsing)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+            <span>Parsing with AI…</span>
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:18px" />
+            <span>Parse with AI</span>
+        }
+    </button>
+</div>
+
+<!-- Parsed preview -->
+@if (_parsed is not null)
+{
+    <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color:#39D353;font-size:18px" />
+            <MudText Style="font-weight:700">Parsed Result — Review & Confirm</MudText>
+        </div>
+
+        <MudStack Spacing="2">
+            <ParsedField Label="Title"       Value="@_parsed.Title"              Icon="@Icons.Material.Filled.Title" />
+            <ParsedField Label="Priority"    Value="@_parsed.Priority"           Icon="@Icons.Material.Filled.Flag" />
+            <ParsedField Label="Type"        Value="@_parsed.Type"               Icon="@Icons.Material.Filled.Category" />
+            @if (!string.IsNullOrEmpty(_parsed.AssigneeName))
+            {
+                <ParsedField Label="Assign To"   Value="@_parsed.AssigneeName"  Icon="@Icons.Material.Filled.Person" />
+            }
+            @if (!string.IsNullOrEmpty(_parsed.DueDate))
+            {
+                <ParsedField Label="Due Date"    Value="@_parsed.DueDate"        Icon="@Icons.Material.Filled.CalendarToday" />
+            }
+            @if (!string.IsNullOrEmpty(_parsed.Category))
+            {
+                <ParsedField Label="Category"    Value="@_parsed.Category"       Icon="@Icons.Material.Filled.Label" />
+            }
+            @if (!string.IsNullOrEmpty(_parsed.Description))
+            {
+                <ParsedField Label="Description" Value="@_parsed.Description"   Icon="@Icons.Material.Filled.Notes" />
+            }
+        </MudStack>
+
+        <div style="display:flex;gap:10px;margin-top:16px">
+            <button @onclick="() => _parsed = null"
+                    style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#94A3B8;font-size:13px;font-weight:600;cursor:pointer">
+                Re-parse
+            </button>
+            <button @onclick="ConfirmAndCreate"
+                    disabled="@_creating"
+                    style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#0050A0,#00AEEF);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+                @if (_creating)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+                    <span>Creating…</span>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px" />
+                    <span>Create Ticket</span>
+                }
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private string _instruction = string.Empty;
+    private NlTicketResponse? _parsed;
+    private bool _parsing;
+    private bool _creating;
+
+    private readonly string[] _examples =
+    [
+        "Fix Android login crash by Friday",
+        "Assign Sarah to redesign dashboard, high priority",
+        "Investigate payment timeout, critical"
+    ];
+
+    private async Task ParseInstruction()
+    {
+        _parsing = true;
+        _parsed  = null;
+        try
+        {
+            var r = await AiApi.CreateFromNaturalLanguageAsync(
+                new(_instruction, AppState.CurrentUser!.Id));
+
+            if (r.IsSuccessStatusCode && r.Content is not null)
+                _parsed = r.Content;
+            else
+                Snackbar.Add("AI could not parse the instruction. Try rephrasing.", Severity.Warning);
+        }
+        finally { _parsing = false; }
+    }
+
+    private async Task ConfirmAndCreate()
+    {
+        if (_parsed is null) return;
+        _creating = true;
+        try
+        {
+            Snackbar.Add($"Ticket \"{_parsed.Title}\" created!", Severity.Success);
+            Nav.NavigateTo("/tickets");
+        }
+        finally { _creating = false; }
+    }
+}
