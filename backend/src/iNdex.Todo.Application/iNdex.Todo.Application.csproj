@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\iNdex.Todo.Domain\iNdex.Todo.Domain.csproj" />
     <ProjectReference Include="..\iNdex.Todo.Contracts\iNdex.Todo.Contracts.csproj" />
+    <ProjectReference Include="..\iNdex.Todo.AI\iNdex.Todo.AI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

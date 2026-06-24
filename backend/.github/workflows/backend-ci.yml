@@ -13,17 +13,22 @@ on:
       - 'src/**'
       - 'tests/**'
 
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT:       true
+
 jobs:
   build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
-          POSTGRES_USER: postgres
+          POSTGRES_USER:     postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: index_todo_test
+          POSTGRES_DB:       index_todo_test
         ports:
           - 5432:5432
         options: >-
@@ -33,20 +38,64 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
 
-      - name: Restore dependencies
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
         run: dotnet restore iNdex.Todo.sln
 
       - name: Build
-        run: dotnet build iNdex.Todo.sln --no-restore --configuration Release
+        run: dotnet build iNdex.Todo.sln --no-restore -c Release
+
+      - name: Install EF tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply migrations
+        run: |
+          dotnet ef database update \
+            -p src/iNdex.Todo.Infrastructure \
+            -s src/iNdex.Todo.API \
+            --no-build \
+            -c Release
+        env:
+          ConnectionStrings__DefaultConnection: >-
+            Host=localhost;Port=5432;Database=index_todo_test;
+            Username=postgres;Password=postgres
 
       - name: Run tests
-        run: dotnet test iNdex.Todo.sln --no-build --configuration Release --verbosity normal
+        run: |
+          dotnet test iNdex.Todo.sln \
+            --no-build -c Release \
+            --verbosity normal \
+            --results-directory ./test-results \
+            --logger "trx;LogFileName=results.trx" \
+            --collect "XPlat Code Coverage"
         env:
-          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=index_todo_test;Username=postgres;Password=postgres"
+          ConnectionStrings__DefaultConnection: >-
+            Host=localhost;Port=5432;Database=index_todo_test;
+            Username=postgres;Password=postgres
+          JwtSettings__SecretKey: ci-test-secret-key-32-chars-long!!
+          JwtSettings__Issuer:    iNdex.Todo.API
+          JwtSettings__Audience:  iNdex.Todo.Client
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            ./test-results/*.trx
+            ./**/coverage.cobertura.xml
+          retention-days: 7

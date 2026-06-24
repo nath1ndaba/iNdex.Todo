@@ -1,4 +1,5 @@
 using System.Text;
+using iNdex.Todo.AI;
 using iNdex.Todo.API.Endpoints;
 using iNdex.Todo.API.Middleware;
 using iNdex.Todo.Application;
@@ -16,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Layer registrations ───────────────────────────────────────────────────────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAiServices(builder.Configuration);
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration
@@ -112,6 +114,7 @@ app.MapUserEndpoints();
 app.MapTodoListEndpoints();
 app.MapTodoTaskEndpoints();
 app.MapTicketEndpoints();
+app.MapAiEndpoints();
 
 // ── SignalR ───────────────────────────────────────────────────────────────────
 app.MapHub<TodoHub>("/hubs/todo");
