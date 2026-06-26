@@ -17,6 +17,7 @@ public class AppState
     public bool IsDarkMode     { get; private set; } = true;
     public bool IsAuthenticated => CurrentUser is not null && !string.IsNullOrEmpty(AccessToken);
     public bool IsTokenExpired  => TokenExpiry.HasValue && DateTime.UtcNow >= TokenExpiry.Value;
+    public bool IsManager       => CurrentUser?.Role is "Manager" or "Admin";
 
     public event Action? OnChange;
 

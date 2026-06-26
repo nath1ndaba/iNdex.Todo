@@ -4,7 +4,7 @@ namespace iNdex.Todo.Mobile.Models;
 
 // ── Requests ─────────────────────────────────────────────────────────────────
 
-public record RegisterUserRequest(string FirstName, string LastName, string Email, string Password);
+public record RegisterUserRequest(string FirstName, string LastName, string Email, string Password, string? Role = null);
 public record LoginRequest(string Email, string Password);
 public record RefreshTokenRequest(string RefreshToken);
 public record RevokeTokenRequest(string RefreshToken);
@@ -47,7 +47,9 @@ public record UserResponse(
     string Email,
     string? ProfileImageUrl,
     DateTime? LastLoginAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Role = null,
+    string? Department = null);
 
 public record TodoListResponse(
     Guid Id,
@@ -182,3 +184,43 @@ public record NlTicketResponse(string Title, string? Description, string? Assign
 public record CategorySuggestionResponse(string Category, float Confidence, string ConfidencePercent);
 public record ExecutiveSummaryResponse(DateTime Date, int OpenTickets, int CriticalTickets, int CompletedThisWeek, float ReleaseReadiness, List<string> TopRisks, List<string> RecommendedActions, string Narrative);
 public record ReleaseReadinessResponse(float Score, string Grade, string Analysis, bool ReadyToRelease);
+
+// ── Team Models ───────────────────────────────────────────────────────────────
+public record TeamMemberSnapshot(
+    Guid UserId, string FullName, string Email, string? Role, string? Department,
+    string? AvatarInitials,
+    int OpenTickets, int InProgressTickets, int InReviewTickets,
+    int CompletedToday, int CompletedThisWeek, int CompletedAllTime,
+    decimal HoursToday, decimal HoursThisWeek, decimal HoursAllTime,
+    float CompletionRate, float? ProductivityScore,
+    DateTime? LastActivityAt, bool IsInactive, string ActivityStatus,
+    int TotalTicketsAssigned, int TotalTicketsCreated, DateTime MemberSince);
+
+public record TeamTicketItem(
+    Guid Id, string TicketNumber, string Title, string Status,
+    string Priority, DateTime CreatedAt, DateTime? DueDate, bool IsOverdue);
+
+public record TeamTimeLogItem(
+    Guid Id, string TicketNumber, decimal Hours, string Description, DateTime LoggedDate);
+
+public record TeamMemberDetail(
+    TeamMemberSnapshot Snapshot,
+    List<TeamTicketItem> RecentTickets,
+    List<TeamTimeLogItem> RecentTimeLogs,
+    List<string> Skills,
+    string? AiInsight);
+
+public record TeamOverviewResponse(
+    int TotalMembers, int ActiveToday, int InactiveMembers,
+    int TotalOpenTickets, int TotalHoursThisWeek,
+    List<TeamMemberSnapshot> Members);
+
+public record InactiveMembersResponse(
+    int InactiveDaysThreshold,
+    List<TeamMemberSnapshot> Members);
+
+// SignalR team events
+public record TeamActivityEvent(
+    Guid ByUserId, string UserName,
+    string? TicketNumber, string? Title,
+    decimal? Hours, DateTime At);

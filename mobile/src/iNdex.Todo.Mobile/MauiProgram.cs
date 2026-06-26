@@ -78,6 +78,11 @@ public static class MauiProgram
             .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBaseUrl))
             .AddHttpMessageHandler<AuthTokenHandler>();
 
+        builder.Services
+            .AddRefitClient<ITeamApi>(refitSettings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(apiBaseUrl))
+            .AddHttpMessageHandler<AuthTokenHandler>();
+
         // ── App services ───────────────────────────────────────────────────────
         builder.Services.AddSingleton<AppState>();
         builder.Services.AddSingleton<TodoRealtimeService>();

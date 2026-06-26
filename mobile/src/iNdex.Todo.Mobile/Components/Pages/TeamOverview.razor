@@ -1,0 +1,317 @@
+@page "/team"
+@inject ITeamApi TeamApi
+@inject AppState AppState
+@inject TodoRealtimeService Realtime
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>Team – Taskly</PageTitle>
+
+@if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:800">Team Overview</MudText>
+        <MudText Typo="Typo.caption" Style="opacity:.4">Live — updates in real time</MudText>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+        <!-- Live indicator -->
+        <div style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;background:rgba(57,211,83,.1);border:1px solid rgba(57,211,83,.2)">
+            <div style="width:7px;height:7px;border-radius:50%;background:#39D353;animation:pulse 2s infinite"></div>
+            <MudText Typo="Typo.caption" Style="color:#39D353;font-weight:700">LIVE</MudText>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       OnClick="LoadAsync" Color="Color.Default" />
+    </div>
+</div>
+
+<!-- Summary stats -->
+@if (_overview is not null)
+{
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+        <div class="card" style="padding:12px 14px">
+            <MudText Style="font-size:1.6rem;font-weight:900;color:#00AEEF;line-height:1">@_overview.TotalMembers</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.45;margin-top:2px">Team members</MudText>
+        </div>
+        <div class="card" style="padding:12px 14px">
+            <MudText Style="font-size:1.6rem;font-weight:900;color:#39D353;line-height:1">@_overview.ActiveToday</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.45;margin-top:2px">Active today</MudText>
+        </div>
+        <div class="card" style="padding:12px 14px;@(_overview.InactiveMembers > 0 ? "border-color:rgba(239,68,68,.3)" : "")">
+            <MudText Style="@($"font-size:1.6rem;font-weight:900;line-height:1;color:{(_overview.InactiveMembers > 0 ? "#EF4444" : "#64748B")}")">
+                @_overview.InactiveMembers
+            </MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.45;margin-top:2px">Need follow-up</MudText>
+        </div>
+        <div class="card" style="padding:12px 14px">
+            <MudText Style="font-size:1.6rem;font-weight:900;color:#F5A623;line-height:1">@_overview.TotalOpenTickets</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.45;margin-top:2px">Open tickets total</MudText>
+        </div>
+    </div>
+}
+
+<!-- Activity feed (real-time events from SignalR) -->
+@if (_activityFeed.Count > 0)
+{
+    <div class="card" style="margin-bottom:16px;max-height:180px;overflow-y:auto">
+        <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:10px">
+            Live Activity
+        </MudText>
+        <MudStack Spacing="1">
+            @foreach (var event_ in _activityFeed.Take(10))
+            {
+                <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                    <div style="width:6px;height:6px;border-radius:50%;background:@GetEventColor(event_.Type);flex-shrink:0"></div>
+                    <span style="font-weight:600;color:#F1F5F9">@event_.UserName</span>
+                    <span style="opacity:.5">@event_.Message</span>
+                    <span style="opacity:.3;margin-left:auto;white-space:nowrap">@event_.When</span>
+                </div>
+            }
+        </MudStack>
+    </div>
+}
+
+<!-- Filter tabs -->
+<div style="display:flex;gap:8px;margin-bottom:14px">
+    @foreach (var (label, filter) in new[] { ("All","All"), ("Needs Follow-up","Inactive"), ("Active","Active") })
+    {
+        var active = _filter == filter;
+        <button @onclick="() => _filter = filter"
+                style="@($"padding:6px 14px;border-radius:10px;border:1px solid {(active ? "rgba(0,174,239,.4)" : "rgba(255,255,255,.08)")};background:{(active ? "rgba(0,174,239,.12)" : "transparent")};color:{(active ? "#00AEEF" : "#64748B")};font-size:12px;font-weight:600;cursor:pointer;transition:all .15s")">
+            @label
+            @if (filter == "Inactive" && _overview?.InactiveMembers > 0)
+            {
+                <span style="margin-left:5px;padding:1px 6px;border-radius:99px;background:#EF4444;color:white;font-size:10px">
+                    @_overview.InactiveMembers
+                </span>
+            }
+        </button>
+    }
+</div>
+
+<!-- Team member cards -->
+@if (_loading)
+{
+    <MudStack Spacing="2">
+        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="100px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" /> }
+    </MudStack>
+}
+else if (FilteredMembers.Count == 0)
+{
+    <div class="card" style="text-align:center;padding:40px">
+        <MudText Style="opacity:.35">No members match this filter.</MudText>
+    </div>
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var member in FilteredMembers)
+        {
+            <div class="@(member.IsInactive ? "card card-glow-orange" : "card")"
+                 style="cursor:pointer;transition:all .15s"
+                 @onclick="@(() => Nav.NavigateTo($"/team/{member.UserId}"))">
+
+                <div style="display:flex;align-items:center;gap:12px">
+                    <!-- Avatar with status ring -->
+                    <div style="position:relative;flex-shrink:0">
+                        <div style="width:44px;
+                            height:44px;
+                            border-radius:50%;
+                            @GetAvatarGradient(member);
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            font-weight:800;
+                            font-size:.9rem;
+                            color:white">
+                            @member.AvatarInitials
+                        </div>
+                        <!-- Online dot -->
+                        <div style="@($"position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;background:{GetStatusColor(member.ActivityStatus)};border:2px solid #070B14")"></div>
+                    </div>
+
+                    <!-- Name + role -->
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <MudText Style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                @member.FullName
+                            </MudText>
+                            @if (member.IsInactive)
+                            {
+                                <span style="padding:2px 8px;border-radius:99px;background:rgba(239,68,68,.15);color:#EF4444;font-size:10px;font-weight:700;flex-shrink:0">
+                                    Follow up
+                                </span>
+                            }
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:1px">
+                            @if (!string.IsNullOrEmpty(member.Role))
+                            {
+                                <MudText Typo="Typo.caption" Style="opacity:.45">@member.Role</MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(member.Department))
+                            {
+                                <span style="opacity:.25;font-size:10px">•</span>
+                                <MudText Typo="Typo.caption" Style="opacity:.35">@member.Department</MudText>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Chevron -->
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Style="opacity:.25;flex-shrink:0" />
+                </div>
+
+                <!-- Stats row -->
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)">
+                    <StatBadge Label="Open"      Value="@member.OpenTickets.ToString()"           Color="#00AEEF" />
+                    <StatBadge Label="Done / wk" Value="@member.CompletedThisWeek.ToString()"     Color="#39D353" />
+                    <StatBadge Label="Hours / wk" Value="@member.HoursThisWeek.ToString("0.#")"  Color="#F5A623" />
+                    <StatBadge Label="Rate"       Value='@($"{member.CompletionRate:P0}")'        Color="@(member.CompletionRate >= 0.7f ? "#39D353" : member.CompletionRate >= 0.4f ? "#F5A623" : "#EF4444")" />
+                </div>
+
+                <!-- Last activity -->
+                <div style="margin-top:8px;display:flex;align-items:center;gap:5px">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Style="font-size:12px;opacity:.3" />
+                    <MudText Typo="Typo.caption" Style="opacity:.35">
+                        @GetLastActivityLabel(member.LastActivityAt)
+                    </MudText>
+                    @if (member.OpenTickets == 0 && !member.IsInactive)
+                    {
+                        <span style="margin-left:auto;padding:2px 8px;border-radius:99px;background:rgba(245,166,35,.12);color:#F5A623;font-size:10px;font-weight:600">
+                            No open tickets
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+    </MudStack>
+}
+
+@code {
+    record ActivityFeedItem(string Type, string UserName, string Message, string When);
+
+    private TeamOverviewResponse? _overview;
+    private bool   _loading = true;
+    private string _filter  = "All";
+    private readonly List<ActivityFeedItem> _activityFeed = [];
+
+    private List<TeamMemberSnapshot> FilteredMembers => (_overview?.Members ?? [])
+        .Where(m => _filter switch
+        {
+            "Inactive" => m.IsInactive,
+            "Active"   => !m.IsInactive,
+            _          => true
+        }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+
+        // Register real-time team events
+        Realtime.OnTeamTicketOpened    += OnTicketOpened;
+        Realtime.OnTeamTicketCompleted += OnTicketCompleted;
+        Realtime.OnTeamTimeLogged      += OnTimeLogged;
+        Realtime.OnTeamUpdate          += OnTeamUpdate;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var r = await TeamApi.GetTeamOverviewAsync();
+            if (r.IsSuccessStatusCode) _overview = r.Content;
+        }
+        finally { _loading = false; }
+    }
+
+    // ── Real-time handlers ────────────────────────────────────────────────────
+    private void OnTicketOpened(TeamActivityEvent e)
+    {
+        AddFeed("opened", e.UserName, $"opened ticket {e.TicketNumber}", e.At);
+        _ = LoadAsync(); // refresh overview
+    }
+
+    private void OnTicketCompleted(TeamActivityEvent e)
+    {
+        AddFeed("completed", e.UserName, $"completed ticket {e.TicketNumber}", e.At);
+        _ = LoadAsync();
+    }
+
+    private void OnTimeLogged(TeamActivityEvent e)
+    {
+        AddFeed("time", e.UserName, $"logged {e.Hours}h on {e.TicketNumber}", e.At);
+        _ = LoadAsync();
+    }
+
+    private void OnTeamUpdate(object _) => _ = LoadAsync();
+
+    private void AddFeed(string type, string user, string msg, DateTime at)
+    {
+        _activityFeed.Insert(0, new(type, user, msg, FormatTime(at)));
+        if (_activityFeed.Count > 20) _activityFeed.RemoveAt(_activityFeed.Count - 1);
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    private static string GetStatusColor(string status) => status switch
+    {
+        "Active"   => "#39D353",
+        "Idle"     => "#F5A623",
+        "Inactive" => "#EF4444",
+        _          => "#64748B"
+    };
+
+    private static string GetEventColor(string type) => type switch
+    {
+        "completed" => "#39D353",
+        "opened"    => "#00AEEF",
+        "time"      => "#F5A623",
+        _           => "#64748B"
+    };
+
+    private static string GetAvatarGradient(TeamMemberSnapshot m)
+    {
+        var index = Math.Abs((m.AvatarInitials?.GetHashCode() ?? 0) % 4);
+
+        return index switch
+        {
+            0 => "background:linear-gradient(135deg,#0050A0,#00AEEF)",
+            1 => "background:linear-gradient(135deg,#1A6B30,#39D353)",
+            2 => "background:linear-gradient(135deg,#8B5500,#F5A623)",
+            _ => "background:linear-gradient(135deg,#4C1D95,#8B5CF6)"
+        };
+    }
+
+    private static string GetLastActivityLabel(DateTime? last)
+    {
+        if (!last.HasValue) return "No activity recorded";
+        var diff = DateTime.UtcNow - last.Value;
+        return diff.TotalMinutes < 5  ? "Active now" :
+               diff.TotalHours  < 1  ? $"{(int)diff.TotalMinutes}m ago" :
+               diff.TotalHours  < 24 ? $"{(int)diff.TotalHours}h ago" :
+               diff.TotalDays   < 7  ? $"{(int)diff.TotalDays}d ago" :
+               last.Value.ToString("MMM d");
+    }
+
+    private static string FormatTime(DateTime at)
+    {
+        var diff = DateTime.UtcNow - at;
+        return diff.TotalSeconds < 60 ? "just now" :
+               diff.TotalMinutes < 60 ? $"{(int)diff.TotalMinutes}m ago" :
+               at.ToString("HH:mm");
+    }
+
+    public void Dispose()
+    {
+        AppState.OnChange              -= StateHasChanged;
+        Realtime.OnTeamTicketOpened    -= OnTicketOpened;
+        Realtime.OnTeamTicketCompleted -= OnTicketCompleted;
+        Realtime.OnTeamTimeLogged      -= OnTimeLogged;
+        Realtime.OnTeamUpdate          -= OnTeamUpdate;
+    }
+}

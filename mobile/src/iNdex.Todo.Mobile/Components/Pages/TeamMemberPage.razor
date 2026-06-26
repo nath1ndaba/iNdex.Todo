@@ -1,0 +1,216 @@
+@page "/team/{UserId:guid}"
+@inject ITeamApi TeamApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@(_detail?.Snapshot.FullName ?? "Member") – Taskly</PageTitle>
+
+<!-- Back -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+    <button @onclick='() => Nav.NavigateTo("/team")'
+            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#F1F5F9;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+    </button>
+    <MudText Style="font-weight:800;font-size:1.1rem">Member Detail</MudText>
+</div>
+
+@if (_loading)
+{
+    <MudStack Spacing="3">
+        <MudSkeleton Height="100px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" />
+        <MudSkeleton Height="200px" Class="rounded-xl" Style="background:rgba(255,255,255,.05)" />
+    </MudStack>
+}
+else if (_detail is null)
+{
+    <MudText Style="opacity:.4;text-align:center;padding:48px 0">Member not found.</MudText>
+}
+else
+{
+    var s = _detail.Snapshot;
+    var statusColor = s.ActivityStatus switch
+    {
+        "Active" => "#39D353", "Idle" => "#F5A623", _ => "#EF4444"
+    };
+
+    <!-- Profile card -->
+    <div class="card card-glow-blue" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+            <div style="position:relative">
+                <div style="@($"width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#0050A0,#00AEEF);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;color:white")">
+                    @s.AvatarInitials
+                </div>
+                <div style="@($"position:absolute;bottom:2px;right:2px;width:13px;height:13px;border-radius:50%;background:{statusColor};border:2px solid #070B14")"></div>
+            </div>
+            <div style="flex:1;min-width:0">
+                <MudText Style="font-weight:800;font-size:1.1rem">@s.FullName</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.5">@s.Email</MudText>
+                <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+                    @if (!string.IsNullOrEmpty(s.Role))
+                    {
+                        <span style="padding:2px 8px;border-radius:6px;background:rgba(0,174,239,.1);color:#00AEEF;font-size:10px;font-weight:700">@s.Role</span>
+                    }
+                    @if (!string.IsNullOrEmpty(s.Department))
+                    {
+                        <span style="padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:#94A3B8;font-size:10px;font-weight:600">@s.Department</span>
+                    }
+                    <span style="@($"padding:2px 8px;border-radius:6px;background:{statusColor}15;color:{statusColor};font-size:10px;font-weight:700")">
+                        @s.ActivityStatus
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI insight -->
+        @if (!string.IsNullOrEmpty(_detail.AiInsight))
+        {
+            <div style="padding:10px 12px;border-radius:10px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.15);margin-bottom:14px">
+                <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:13px;color:#A78BFA" />
+                    <MudText Typo="Typo.caption" Style="color:#A78BFA;font-weight:700;text-transform:uppercase;letter-spacing:.6px;font-size:9px">AI Insight</MudText>
+                </div>
+                <MudText Typo="Typo.caption" Style="opacity:.65;line-height:1.55">@_detail.AiInsight</MudText>
+            </div>
+        }
+
+        <!-- Stats grid -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            @foreach (var (lbl, val, clr) in new[] {
+                ("Open tickets",    s.OpenTickets.ToString(),                 "#00AEEF"),
+                ("Done this week",  s.CompletedThisWeek.ToString(),           "#39D353"),
+                ("Hours this week", s.HoursThisWeek.ToString("0.#") + "h",  "#F5A623"),
+                ("Done total",      s.CompletedAllTime.ToString(),            "#8B5CF6"),
+                ("Hours total",     s.HoursAllTime.ToString("0.#") + "h",   "#94A3B8"),
+                ("30d rate",        s.CompletionRate.ToString("P0"),          s.CompletionRate >= .7f ? "#39D353" : s.CompletionRate >= .4f ? "#F5A623" : "#EF4444")
+            })
+            {
+                <div style="text-align:center;padding:10px 6px;border-radius:10px;background:rgba(255,255,255,.04)">
+                    <MudText Style="@($"font-size:1.1rem;font-weight:900;color:{clr};line-height:1")">@val</MudText>
+                    <MudText Typo="Typo.caption" Style="opacity:.35;font-size:10px;margin-top:3px;display:block">@lbl</MudText>
+                </div>
+            }
+        </div>
+
+        <!-- Member since + last activity -->
+        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)">
+            <MudText Typo="Typo.caption" Style="opacity:.35">
+                Member since @s.MemberSince.ToString("MMMM yyyy")
+            </MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.35">
+                Last active: @GetLastActive(s.LastActivityAt)
+            </MudText>
+        </div>
+    </div>
+
+    <!-- Skills -->
+    @if (_detail.Skills.Count > 0)
+    {
+        <div class="card" style="margin-bottom:16px">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:10px">
+                Skills
+            </MudText>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                @foreach (var skill in _detail.Skills)
+                {
+                    <span style="padding:4px 12px;border-radius:8px;background:rgba(0,174,239,.08);border:1px solid rgba(0,174,239,.15);color:#00AEEF;font-size:12px;font-weight:600">
+                        @skill
+                    </span>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Recent tickets -->
+    @if (_detail.RecentTickets.Count > 0)
+    {
+        <div class="card" style="margin-bottom:16px">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:12px">
+                Recent Tickets
+            </MudText>
+            <MudStack Spacing="2">
+                @foreach (var t in _detail.RecentTickets.Take(8))
+                {
+                    var tColor = t.Status switch { "Done"=>"#39D353","InProgress"=>"#00AEEF","InReview"=>"#F5A623","Cancelled"=>"#EF4444",_=>"#64748B" };
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04)">
+                        <div style="@($"width:7px;height:7px;border-radius:50%;background:{tColor};flex-shrink:0")"></div>
+                        <div style="flex:1;min-width:0">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:10px;font-weight:700;color:#00AEEF;opacity:.7">@t.TicketNumber</span>
+                                @if (t.IsOverdue)
+                                {
+                                    <span style="padding:1px 6px;border-radius:4px;background:rgba(239,68,68,.15);color:#EF4444;font-size:9px;font-weight:700">Overdue</span>
+                                }
+                            </div>
+                            <MudText Style="font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@t.Title</MudText>
+                        </div>
+                        <span style="@($"padding:3px 8px;border-radius:6px;background:{tColor}18;color:{tColor};font-size:10px;font-weight:600;flex-shrink:0")">
+                            @t.Status
+                        </span>
+                    </div>
+                }
+            </MudStack>
+        </div>
+    }
+
+    <!-- Recent time logs -->
+    @if (_detail.RecentTimeLogs.Count > 0)
+    {
+        <div class="card">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:12px">
+                Recent Time Logs
+            </MudText>
+            <MudStack Spacing="2">
+                @foreach (var log in _detail.RecentTimeLogs.Take(8))
+                {
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04)">
+                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(0,174,239,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+                            <MudText Style="font-weight:900;color:#00AEEF;font-size:.85rem;line-height:1">@log.Hours.ToString("0.#")</MudText>
+                            <MudText Style="font-size:8px;opacity:.5;line-height:1">h</MudText>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <MudText Style="font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@log.Description</MudText>
+                            <div style="display:flex;gap:6px;margin-top:2px">
+                                <span style="font-size:10px;font-weight:700;color:#00AEEF;opacity:.6">@log.TicketNumber</span>
+                                <span style="font-size:10px;opacity:.35">@log.LoggedDate.ToString("MMM d")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </MudStack>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public Guid UserId { get; set; }
+
+    private TeamMemberDetail? _detail;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        _loading = true;
+        try
+        {
+            var r = await TeamApi.GetTeamMemberDetailAsync(UserId);
+            if (r.IsSuccessStatusCode) _detail = r.Content;
+        }
+        finally { _loading = false; }
+    }
+
+    private static string GetLastActive(DateTime? last)
+    {
+        if (!last.HasValue) return "Never";
+        var diff = DateTime.UtcNow - last.Value;
+        return diff.TotalMinutes < 5  ? "Right now"
+             : diff.TotalHours  < 1  ? $"{(int)diff.TotalMinutes}m ago"
+             : diff.TotalHours  < 24 ? $"{(int)diff.TotalHours}h ago"
+             : diff.TotalDays   < 7  ? $"{(int)diff.TotalDays}d ago"
+             : last.Value.ToString("MMM d, yyyy");
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}
