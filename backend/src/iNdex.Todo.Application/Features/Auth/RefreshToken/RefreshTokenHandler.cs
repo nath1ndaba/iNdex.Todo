@@ -31,15 +31,15 @@ public sealed class RefreshTokenHandler(
         // Rotate the refresh token
         var newRefresh = new Domain.Entities.RefreshToken
         {
-            UserId = user.Id,
-            Token = jwtService.GenerateRefreshToken(),
+            UserId    = user.Id,
+            Token     = jwtService.GenerateRefreshToken(),
             ExpiresAt = jwtService.RefreshTokenExpiry,
             CreatedBy = user.Id.ToString()
         };
 
-        existing.IsRevoked = true;
+        existing.IsRevoked       = true;
         existing.ReplacedByToken = newRefresh.Token;
-        existing.RevokedReason = "Rotated";
+        existing.RevokedReason   = "Rotated";
 
         await refreshTokenRepository.UpdateAsync(existing, cancellationToken);
         await refreshTokenRepository.AddAsync(newRefresh, cancellationToken);
@@ -50,7 +50,7 @@ public sealed class RefreshTokenHandler(
             newRefresh.Token,
             jwtService.AccessTokenExpiry,
             new UserResponse(user.Id, user.FirstName, user.LastName, user.Email,
-                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt)));
+                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt, user.Role, user.Department)));
     }
 }
 
@@ -69,7 +69,7 @@ public sealed class RevokeTokenHandler(
             return Result.Failure<bool>(
                 Error.Validation("Auth.InvalidRefreshToken", "Token not found or already revoked."));
 
-        token.IsRevoked = true;
+        token.IsRevoked     = true;
         token.RevokedReason = "Revoked by user";
 
         await refreshTokenRepository.UpdateAsync(token, cancellationToken);

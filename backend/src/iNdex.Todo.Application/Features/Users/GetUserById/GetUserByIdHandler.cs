@@ -12,8 +12,7 @@ public sealed class GetUserByIdHandler(IUserRepository repository)
     : IHandler<GetUserByIdQuery, UserResponse>
 {
     public async Task<Result<UserResponse>> HandleAsync(
-        GetUserByIdQuery request,
-        CancellationToken cancellationToken = default)
+        GetUserByIdQuery request, CancellationToken cancellationToken = default)
     {
         var user = await repository.GetByIdAsync(request.Id, cancellationToken);
 
@@ -21,12 +20,8 @@ public sealed class GetUserByIdHandler(IUserRepository repository)
             return Result.Failure<UserResponse>(Error.NotFound(nameof(User), request.Id));
 
         return Result.Success(new UserResponse(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Email,
-            user.ProfileImageUrl,
-            user.LastLoginAt,
-            user.CreatedAt));
+            user.Id, user.FirstName, user.LastName, user.Email,
+            user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt,
+            user.Role, user.Department));
     }
 }

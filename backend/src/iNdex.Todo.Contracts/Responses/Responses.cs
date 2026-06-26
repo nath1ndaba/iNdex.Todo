@@ -7,7 +7,9 @@ public sealed record UserResponse(
     string Email,
     string? ProfileImageUrl,
     DateTime? LastLoginAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Role = null,
+    string? Department = null);
 
 public sealed record TodoListResponse(
     Guid Id,

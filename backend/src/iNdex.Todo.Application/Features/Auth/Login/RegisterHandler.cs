@@ -33,6 +33,8 @@ public sealed class RegisterHandler(
             LastName     = request.LastName,
             Email        = request.Email,
             PasswordHash = passwordService.Hash(request.Password),
+            Role         = request.Role,
+            Department   = request.Department,
             CreatedBy    = "system"
         };
 
@@ -63,7 +65,7 @@ public sealed class RegisterHandler(
             refreshToken.Token,
             jwtService.AccessTokenExpiry,
             new UserResponse(user.Id, user.FirstName, user.LastName, user.Email,
-                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt)));
+                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt, user.Role, user.Department)));
     }
 }
 

@@ -1,7 +1,9 @@
 using FluentValidation;
 using iNdex.Todo.Application.Common.Interfaces;
+using iNdex.Todo.Application.Features.AI;
 using iNdex.Todo.Application.Features.Auth.Login;
 using iNdex.Todo.Application.Features.Auth.RefreshToken;
+using iNdex.Todo.Application.Features.Team;
 using iNdex.Todo.Application.Features.Tickets.CreateTicket;
 using iNdex.Todo.Application.Features.Tickets.GetTickets;
 using iNdex.Todo.Application.Features.TimeLog;
@@ -18,8 +20,10 @@ using iNdex.Todo.Application.Features.TodoTasks.GetTodoTaskById;
 using iNdex.Todo.Application.Features.TodoTasks.UpdateTodoTask;
 using iNdex.Todo.Application.Features.Users.GetAllUsers;
 using iNdex.Todo.Application.Features.Users.GetUserById;
+using iNdex.Todo.Contracts.AI;
 using iNdex.Todo.Contracts.Requests;
 using iNdex.Todo.Contracts.Responses;
+using iNdex.Todo.Contracts.Team;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace iNdex.Todo.Application;
@@ -68,6 +72,26 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IHandler<GetTimeLogsByTicketQuery, TimeLogSummaryResponse>, GetTimeLogsByTicketHandler>();
         services.AddScoped<IHandler<GetTimeLogsByUserQuery, List<TimeLogResponse>>, GetTimeLogsByUserHandler>();
         services.AddScoped<IHandler<DeleteTimeLogCommand, bool>, DeleteTimeLogHandler>();
+
+        // Team oversight
+        services.AddScoped<IHandler<GetTeamOverviewQuery, TeamOverviewResponse>, GetTeamOverviewHandler>();
+        services.AddScoped<IHandler<GetTeamMemberDetailQuery, TeamMemberDetail>, GetTeamMemberDetailHandler>();
+        services.AddScoped<IHandler<GetInactiveMembersQuery, InactiveMembersResponse>, GetInactiveMembersHandler>();
+
+        // Sprint 1 — ML.NET
+        services.AddScoped<IHandler<PredictPriorityRequest, PriorityPredictionResponse>, PredictPriorityHandler>();
+        services.AddScoped<IHandler<SuggestAssigneeRequest, AssigneeSuggestionResponse>, SuggestAssigneeHandler>();
+        services.AddScoped<IHandler<PredictCompletionRequest, CompletionPredictionResponse>, PredictCompletionHandler>();
+        services.AddScoped<IHandler<PredictDeadlineRiskRequest, DeadlineRiskResponse>, PredictDeadlineRiskHandler>();
+
+        // Sprint 3 — Gemini
+        services.AddScoped<IHandler<SummarizeTicketRequest, TicketSummaryResponse>, SummarizeTicketHandler>();
+        services.AddScoped<IHandler<NaturalLanguageTicketRequest, NlTicketResponse>, NaturalLanguageTicketHandler>();
+        services.AddScoped<IHandler<SuggestCategoryRequest, CategorySuggestionResponse>, SuggestCategoryHandler>();
+
+        // Sprint 6 — AI Project Manager
+        services.AddScoped<IHandler<GenerateExecutiveSummaryRequest, ExecutiveSummaryResponse>, ExecutiveSummaryHandler>();
+        services.AddScoped<IHandler<ReleaseReadinessRequest, ReleaseReadinessResponse>, ReleaseReadinessHandler>();
 
         return services;
     }

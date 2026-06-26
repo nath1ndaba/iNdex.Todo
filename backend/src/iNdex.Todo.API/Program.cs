@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Layer registrations ───────────────────────────────────────────────────────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-//builder.Services.AddAiServices(builder.Configuration);
+builder.Services.AddAiServices(builder.Configuration);
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration
@@ -28,21 +28,21 @@ builder.Services
     .AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey         = new SymmetricSecurityKey(
+            IssuerSigningKey = new SymmetricSecurityKey(
                                            Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-            ValidateIssuer   = true,
-            ValidIssuer      = jwtSettings.Issuer,
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
             ValidateAudience = true,
-            ValidAudience    = jwtSettings.Audience,
+            ValidAudience = jwtSettings.Audience,
             ValidateLifetime = true,
-            ClockSkew        = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero
         };
 
         // Allow SignalR to pass token via query string
@@ -51,7 +51,7 @@ builder.Services
             OnMessageReceived = ctx =>
             {
                 var token = ctx.Request.Query["access_token"];
-                var path  = ctx.HttpContext.Request.Path;
+                var path = ctx.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(token) && path.StartsWithSegments("/hubs"))
                     ctx.Token = token;
                 return Task.CompletedTask;
@@ -114,6 +114,7 @@ app.MapUserEndpoints();
 app.MapTodoListEndpoints();
 app.MapTodoTaskEndpoints();
 app.MapTicketEndpoints();
+app.MapTeamEndpoints();
 app.MapAiEndpoints();
 
 // ── SignalR ───────────────────────────────────────────────────────────────────
