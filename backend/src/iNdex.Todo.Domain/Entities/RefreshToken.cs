@@ -11,8 +11,8 @@ public sealed class RefreshToken : BaseEntity
     public string? ReplacedByToken { get; set; }
     public string? RevokedReason { get; set; }
 
-    public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
-    public bool IsActive  => !IsRevoked && !IsExpired;
+    public bool IsExpired    => DateTime.UtcNow >= ExpiresAt;
+    public bool IsTokenActive => !IsRevoked && !IsExpired;
 
     public User User { get; set; } = null!;
 }

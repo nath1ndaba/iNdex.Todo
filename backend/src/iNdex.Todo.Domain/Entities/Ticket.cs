@@ -23,6 +23,18 @@ public sealed class Ticket : BaseEntity
     public Guid CreatedByUserId   { get; set; }
     public Guid? AssignedToUserId { get; set; }
 
+    // AI-assisted fields (populated by the AI layer, never by user directly)
+    public string? AiSummary             { get; set; }
+    public string? AiSuggestedPriority   { get; set; }  // "Low","Medium","High","Critical"
+    public float?  AiPriorityConfidence  { get; set; }  // 0-1
+    public Guid?   AiSuggestedAssigneeId { get; set; }
+    public float?  AiAssigneeConfidence  { get; set; }
+    public float?  AiEstimatedDays       { get; set; }
+    public string? AiDeadlineRisk        { get; set; }  // "Low","Medium","High"
+    public string? AiCategory            { get; set; }
+    public float?  AiCategoryConfidence  { get; set; }
+    public DateTime? AiSummaryGeneratedAt { get; set; }
+
     // Navigation
     public User CreatedByUser      { get; set; } = null!;
     public User? AssignedToUser    { get; set; }

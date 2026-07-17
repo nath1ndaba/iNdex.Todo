@@ -5,7 +5,9 @@ public sealed record RegisterUserRequest(
     string FirstName,
     string LastName,
     string Email,
-    string Password);
+    string Password,
+    string? Role       = null,
+    string? Department = null);
 
 public sealed record LoginRequest(
     string Email,

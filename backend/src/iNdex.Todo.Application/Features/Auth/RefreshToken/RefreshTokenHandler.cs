@@ -20,7 +20,7 @@ public sealed class RefreshTokenHandler(
     {
         var existing = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
 
-        if (existing is null || !existing.IsActive)
+        if (existing is null || !existing.IsTokenActive)
             return Result.Failure<AuthResponse>(
                 Error.Validation("Auth.InvalidRefreshToken", "Refresh token is invalid or expired."));
 
@@ -50,7 +50,7 @@ public sealed class RefreshTokenHandler(
             newRefresh.Token,
             jwtService.AccessTokenExpiry,
             new UserResponse(user.Id, user.FirstName, user.LastName, user.Email,
-                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt)));
+                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt, user.Role, user.Department)));
     }
 }
 
@@ -65,7 +65,7 @@ public sealed class RevokeTokenHandler(
     {
         var token = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
 
-        if (token is null || !token.IsActive)
+        if (token is null || !token.IsTokenActive)
             return Result.Failure<bool>(
                 Error.Validation("Auth.InvalidRefreshToken", "Token not found or already revoked."));
 

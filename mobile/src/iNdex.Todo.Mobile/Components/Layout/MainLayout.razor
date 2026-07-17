@@ -7,14 +7,24 @@
 
 <MudThemeProvider @bind-IsDarkMode="_dark" Theme="_theme" />
 <MudPopoverProvider />
-<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" CloseButton="true" />
+<MudDialogProvider FullWidth="true"
+                   MaxWidth="MaxWidth.Small"
+                   CloseButton="true"
+                   CloseOnEscapeKey="true"
+                   BackdropClick="true" />
 <MudSnackbarProvider />
 
 @if (AppState.IsAuthenticated)
 {
     <header class="app-header">
         <div style="display:flex;align-items:center;gap:10px">
-            <img src="logo.png" alt="iNdex" style="height:40px;width:40px;object-fit:contain;border-radius:8px" />
+            <img src="logo.png" alt="Taskly"
+                 style="height:30px;width:30px;object-fit:contain;border-radius:8px"
+                 onerror="this.style.display='none'" />
+            <div>
+                <span style="font-weight:900;font-size:1rem;color:#00AEEF">Task</span>
+                <span style="font-weight:900;font-size:1rem;color:#F5A623">Me</span>
+            </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
             <ConnectionStatus />
@@ -31,10 +41,20 @@
     <div class="page-content">@Body</div>
 
     <nav class="bottom-nav">
-        <NavButton Href="/" Icon="@Icons.Material.Filled.Dashboard" Label="Home" Active="@IsActive("/", exact: true)" />
-        <NavButton Href="/lists" Icon="@Icons.Material.Filled.CheckCircleOutline" Label="Tasks" Active="@IsActive("/lists")" />
+        <NavButton Href="/"        Icon="@Icons.Material.Filled.Dashboard"          Label="Home"    Active="@IsActive("/", exact: true)" />
+        <NavButton Href="/lists"   Icon="@Icons.Material.Filled.CheckCircleOutline" Label="Tasks"   Active="@IsActive("/lists")" />
         <NavButton Href="/tickets" Icon="@Icons.Material.Filled.ConfirmationNumber" Label="Tickets" Active="@IsActive("/tickets")" />
-        <NavButton Href="/timelog" Icon="@Icons.Material.Filled.Timer" Label="Time" Active="@IsActive("/timelog")" />
+        <NavButton Href="/timelog" Icon="@Icons.Material.Filled.Timer"              Label="Time"    Active="@IsActive("/timelog")" />
+
+        @if (AppState.IsManager)
+        {
+            <NavButton Href="/team" Icon="@Icons.Material.Filled.Groups" Label="Team" Active="@IsActive("/team")" />
+        }
+        else
+        {
+            <NavButton Href="/ai"  Icon="@Icons.Material.Filled.AutoAwesome" Label="AI" Active="@IsActive("/ai")" />
+        }
+
         <NavButton Href="/settings" Icon="@Icons.Material.Filled.Person" Label="Me" Active="@IsActive("/settings")" />
     </nav>
 }
@@ -55,14 +75,13 @@ else
             Tertiary = "#F5A623",
 
             Background = "#070B14",
+            AppbarBackground = "#00000000",
 
-            AppbarBackground = "#070B14",
-            DrawerBackground = "#070B14",
-
-            Surface = "#111827",
+            DrawerBackground = "#F7070B14",   // 97% opacity
+            Surface = "#0AFFFFFF",            // 4% opacity
 
             TextPrimary = "#F1F5F9",
-            TextSecondary = "#64748B"
+            TextSecondary = "#64748B",
         },
         Typography = new Typography
         {
@@ -77,14 +96,14 @@ else
         _dark = AppState.IsDarkMode;
         TokenRefresh.Start();
         if (AppState.IsAuthenticated)
-            await Realtime.ConnectAsync(AppState.CurrentUser!.Id);
+            await Realtime.ConnectAsync(AppState.CurrentUser!.Id, AppState.CurrentUser.Role);
     }
 
     private async void OnStateChanged()
     {
         _dark = AppState.IsDarkMode;
         if (AppState.IsAuthenticated)
-            await Realtime.ConnectAsync(AppState.CurrentUser!.Id);
+            await Realtime.ConnectAsync(AppState.CurrentUser!.Id, AppState.CurrentUser.Role);
         await InvokeAsync(StateHasChanged);
     }
 

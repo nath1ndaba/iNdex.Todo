@@ -4,11 +4,16 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
-<PageTitle>Register – iNdex Todo</PageTitle>
+<PageTitle>Register – Task Me</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraSmall"
               Class="d-flex flex-column align-center justify-center"
               Style="min-height:80vh">
+
+    <MudStack AlignItems="AlignItems.Center" Spacing="0" Class="mb-6">
+        <MudText Typo="Typo.h3" Style="font-weight:900;color:#00AEEF;letter-spacing:-1px">iNdex</MudText>
+        <MudText Typo="Typo.h4" Style="font-weight:900;color:#F5A623;margin-top:-4px">Todo</MudText>
+    </MudStack>
 
     <MudPaper Elevation="4" Class="pa-6 rounded-xl" Style="width:100%">
         <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700">Create your account</MudText>
@@ -35,6 +40,16 @@
                       FullWidth="true"
                       Class="mt-2 mb-2" />
 
+        <MudSelect T="string" @bind-Value="_role" Label="Your role"
+                   Variant="Variant.Outlined" FullWidth="true" Class="mb-2">
+            <MudSelectItem T="string" Value="@("Manager")">Manager / Admin</MudSelectItem>
+            <MudSelectItem T="string" Value="@("Senior")">Senior Developer</MudSelectItem>
+            <MudSelectItem T="string" Value="@("Junior")">Junior Developer</MudSelectItem>
+            <MudSelectItem T="string" Value="@("Intern")">Intern</MudSelectItem>
+            <MudSelectItem T="string" Value="@("Marketing")">Marketing</MudSelectItem>
+            <MudSelectItem T="string" Value="@("Support")">Support</MudSelectItem>
+        </MudSelect>
+
         <MudTextField @bind-Value="_password"
                       Label="Password"
                       Variant="Variant.Outlined"
@@ -54,10 +69,7 @@
                    OnClick="RegisterAsync"
                    Disabled="_loading"
                    Class="rounded-xl">
-            @if (_loading)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
             Create Account
         </MudButton>
 
@@ -72,16 +84,17 @@
 
 @code {
     private string _firstName = string.Empty;
-    private string _lastName = string.Empty;
-    private string _email = string.Empty;
-    private string _password = string.Empty;
-    private bool _showPwd;
-    private bool _loading;
+    private string _lastName  = string.Empty;
+    private string _email     = string.Empty;
+    private string _password  = string.Empty;
+    private string _role      = "Junior";
+    private bool   _showPwd;
+    private bool   _loading;
 
     private async Task RegisterAsync()
     {
         if (string.IsNullOrWhiteSpace(_firstName) ||
-            string.IsNullOrWhiteSpace(_email) ||
+            string.IsNullOrWhiteSpace(_email)     ||
             string.IsNullOrWhiteSpace(_password))
         {
             Snackbar.Add("Please fill in all required fields.", Severity.Warning);
@@ -92,7 +105,7 @@
         try
         {
             var resp = await AuthApi.RegisterAsync(
-                new(_firstName.Trim(), _lastName.Trim(), _email.Trim(), _password));
+                new(_firstName.Trim(), _lastName.Trim(), _email.Trim(), _password, _role));
 
             if (!resp.IsSuccessStatusCode || resp.Content is null)
             {

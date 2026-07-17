@@ -4,25 +4,83 @@ on:
   push:
     branches: [publish]
 
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT:       true
+
 jobs:
   deploy:
+    name: Publish & Deploy API
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore iNdex.Todo.sln
+
+      - name: Build (Release)
+        run: dotnet build iNdex.Todo.sln --no-restore -c Release
+
       - name: Publish API
         run: |
           dotnet publish src/iNdex.Todo.API/iNdex.Todo.API.csproj \
-            --configuration Release \
-            --output ./publish \
-            --no-self-contained
+            -c Release \
+            -o ./publish \
+            --no-build \
+            --no-restore
 
-      - name: Deploy to server
-        # Replace with your deployment target (Docker, Azure, Railway, etc.)
-        run: echo "Add your deployment step here"
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f Dockerfile \
+            -t index-todo-api:${{ github.sha }} \
+            -t index-todo-api:latest \
+            .
+
+      # ── Uncomment and configure one of the deploy targets below ─────────────
+
+      # ── Option A: Push to Docker Hub ────────────────────────────────────────
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # - name: Push image
+      #   run: |
+      #     docker push index-todo-api:${{ github.sha }}
+      #     docker push index-todo-api:latest
+
+      # ── Option B: Deploy to Railway ─────────────────────────────────────────
+      # - name: Deploy to Railway
+      #   uses: bervProject/railway-deploy@v1.0.0
+      #   with:
+      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
+      #     service: index-todo-api
+
+      # ── Option C: Deploy to Azure Web App ───────────────────────────────────
+      # - name: Deploy to Azure
+      #   uses: azure/webapps-deploy@v3
+      #   with:
+      #     app-name: index-todo-api
+      #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+      #     package: ./publish
+
+      - name: Deployment placeholder
+        run: |
+          echo "✅ Build artifact ready at ./publish"
+          echo "Configure a deploy target above (Docker Hub, Railway, Azure, etc.)"
+          echo "Add the required secrets in GitHub → Settings → Secrets and variables → Actions"

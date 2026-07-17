@@ -11,7 +11,7 @@
         Version="1.0.0.0" />
 
     <Properties>
-        <DisplayName>iNdex Todo</DisplayName>
+        <DisplayName>Task Me</DisplayName>
         <PublisherDisplayName>iNdex</PublisherDisplayName>
         <Logo>Assets\StoreLogo.png</Logo>
     </Properties>
@@ -28,7 +28,7 @@
     <Applications>
         <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
             <uap:VisualElements
-                DisplayName="iNdex Todo"
+                DisplayName="Task Me"
                 Description="Your tasks, always in sync."
                 BackgroundColor="#0F172A"
                 Square150x150Logo="Assets\Square150x150Logo.png"

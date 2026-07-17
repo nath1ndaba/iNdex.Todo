@@ -55,7 +55,7 @@ public sealed class LoginHandler(
             refreshToken.Token,
             jwtService.AccessTokenExpiry,
             new UserResponse(user.Id, user.FirstName, user.LastName, user.Email,
-                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt)));
+                             user.ProfileImageUrl, user.LastLoginAt, user.CreatedAt, user.Role, user.Department)));
     }
 }
 

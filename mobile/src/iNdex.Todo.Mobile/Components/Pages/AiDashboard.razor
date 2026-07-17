@@ -1,0 +1,172 @@
+@page "/ai"
+@inject IAiApi AiApi
+@inject AppState AppState
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>AI Insights – iNdex Todo</PageTitle>
+
+<div style="margin-bottom:20px">
+    <MudText Typo="Typo.h5" Style="font-weight:800">AI Insights</MudText>
+    <MudText Typo="Typo.caption" Style="opacity:.4">Powered by ML.NET + Gemini</MudText>
+</div>
+
+<!-- Release readiness card -->
+@if (_readiness is not null)
+{
+    var color = _readiness.Score >= 75 ? "#39D353" : _readiness.Score >= 50 ? "#F5A623" : "#EF4444";
+    <div class="card" style="@($"margin-bottom:16px;border:1px solid {color}44")">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+                Release Readiness
+            </MudText>
+            <div style="@($"padding:4px 12px;border-radius:8px;background:{color}22;color:{color};font-size:13px;font-weight:800")">
+                Grade @_readiness.Grade
+            </div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:12px">
+            <MudText Style="@($"font-size:3rem;font-weight:900;color:{color};line-height:1")">
+                @_readiness.Score.ToString("F0")
+            </MudText>
+            <MudText Style="opacity:.4;margin-bottom:8px">/ 100</MudText>
+            <div style="flex:1"></div>
+            <div style="@($"display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;background:{(_readiness.ReadyToRelease ? "#39D35322" : "#EF444422")};color:{(_readiness.ReadyToRelease ? "#39D353" : "#EF4444")};font-size:12px;font-weight:700")">
+                <MudIcon Icon="@(_readiness.ReadyToRelease ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                         Style="font-size:15px" />
+                @(_readiness.ReadyToRelease ? "Ready" : "Not Ready")
+            </div>
+        </div>
+        <div class="time-bar" style="margin-bottom:10px">
+            <div class="time-bar-fill @(_readiness.Score < 50 ? "over" : "")"
+                 style="@($"width:{_readiness.Score}%;background:linear-gradient(90deg,{color}88,{color})")"></div>
+        </div>
+        <MudText Typo="Typo.caption" Style="opacity:.55;line-height:1.5">@_readiness.Analysis</MudText>
+    </div>
+}
+
+<!-- Executive summary card -->
+@if (_summary is not null)
+{
+    <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px">
+                Today's Summary
+            </MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.3">@_summary.Date.ToString("MMM d, yyyy")</MudText>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+            @foreach (var (label, val, clr) in new[] {
+                ("Open", _summary.OpenTickets.ToString(), "#00AEEF"),
+                ("Critical", _summary.CriticalTickets.ToString(), "#EF4444"),
+                ("Done / wk", _summary.CompletedThisWeek.ToString(), "#39D353")
+            })
+            {
+                <div style="@($"text-align:center;padding:10px 6px;border-radius:10px;background:{clr}0D")">
+                    <MudText Style="@($"font-size:1.4rem;font-weight:900;color:{clr};line-height:1")">@val</MudText>
+                    <MudText Typo="Typo.caption" Style="opacity:.4;margin-top:2px;font-size:10px">@label</MudText>
+                </div>
+            }
+        </div>
+
+        <!-- Narrative -->
+        @if (!string.IsNullOrEmpty(_summary.Narrative))
+        {
+            <MudText Typo="Typo.body2" Style="opacity:.6;line-height:1.6;margin-bottom:14px">
+                @_summary.Narrative
+            </MudText>
+        }
+
+        <!-- Top risks -->
+        @if (_summary.TopRisks.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:8px">
+                Top Risks
+            </MudText>
+            <MudStack Spacing="1">
+                @foreach (var risk in _summary.TopRisks)
+                {
+                    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(239,68,68,.06)">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Style="font-size:14px;color:#EF4444;flex-shrink:0" />
+                        <MudText Typo="Typo.caption" Style="opacity:.7">@risk</MudText>
+                    </div>
+                }
+            </MudStack>
+        }
+
+        <!-- Recommended actions -->
+        @if (_summary.RecommendedActions.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.4;font-weight:700;text-transform:uppercase;letter-spacing:.8px;display:block;margin:12px 0 8px">
+                Recommended Actions
+            </MudText>
+            <MudStack Spacing="1">
+                @foreach (var action in _summary.RecommendedActions)
+                {
+                    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(0,174,239,.06)">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:14px;color:#00AEEF;flex-shrink:0" />
+                        <MudText Typo="Typo.caption" Style="opacity:.7">@action</MudText>
+                    </div>
+                }
+            </MudStack>
+        }
+    </div>
+}
+
+<!-- NL Ticket creation shortcut -->
+<div class="card card-glow-green" style="margin-bottom:16px;cursor:pointer"
+     @onclick='() => Nav.NavigateTo("/ai/create")'>
+    <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(57,211,83,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="color:#39D353" />
+        </div>
+        <div>
+            <MudText Style="font-weight:700">Create Ticket with AI</MudText>
+            <MudText Typo="Typo.caption" Style="opacity:.45">
+                "Assign John to fix login bug by Friday"
+            </MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="opacity:.3;margin-left:auto" />
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div style="text-align:center;padding:32px">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+        <MudText Typo="Typo.caption" Style="opacity:.4;display:block;margin-top:8px">
+            Generating AI insights…
+        </MudText>
+    </div>
+}
+
+@code {
+    private ExecutiveSummaryResponse? _summary;
+    private ReleaseReadinessResponse? _readiness;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (!AppState.IsAuthenticated) { Nav.NavigateTo("/login"); return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var t1 = AiApi.GetExecutiveSummaryAsync();
+            var t2 = AiApi.GetReleaseReadinessAsync();
+            await Task.WhenAll(t1, t2);
+
+            var s = await t1; if (s.IsSuccessStatusCode) _summary   = s.Content;
+            var r = await t2; if (r.IsSuccessStatusCode) _readiness = r.Content;
+        }
+        finally { _loading = false; }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}

@@ -10,6 +10,14 @@ public sealed class User : BaseEntity
     public string? ProfileImageUrl { get; set; }
     public DateTime? LastLoginAt { get; set; }
 
+    // AI workforce fields
+    public string? SkillProfile        { get; set; }  // JSON array e.g. ["Android","API","React"]
+    public float?  ProductivityScore   { get; set; }  // 0-100
+    public float?  PerformanceRating   { get; set; }  // 0-5
+    public string? TrainingAreas       { get; set; }  // JSON array
+    public string? Role                { get; set; }  // "Intern","Junior","Senior","Manager" etc.
+    public string? Department          { get; set; }  // "Engineering","Marketing" etc.
+
     // Auth
     public string PasswordHash { get; set; } = string.Empty;
 

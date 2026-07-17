@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>iNdex Todo</string>
+    <string>Task Me</string>
 
     <key>CFBundleIdentifier</key>
     <string>com.index.todo</string>

@@ -16,6 +16,7 @@ public sealed class GetAllUsersHandler(IUserRepository repository)
 
         return Result.Success(users.Select(u => new UserResponse(
             u.Id, u.FirstName, u.LastName, u.Email,
-            u.ProfileImageUrl, u.LastLoginAt, u.CreatedAt)).ToList());
+            u.ProfileImageUrl, u.LastLoginAt, u.CreatedAt,
+            u.Role, u.Department)).ToList());
     }
 }
